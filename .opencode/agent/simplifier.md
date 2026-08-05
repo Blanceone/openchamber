@@ -20,7 +20,6 @@ permission:
     bun run type-check*: allow
     bun run lint*: allow
     bun run build*: allow
-    bun run docs:validate: allow
     bun run dead-code: allow
     git *: allow
 ---

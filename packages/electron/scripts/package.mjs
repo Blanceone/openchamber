@@ -1,21 +1,20 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { resolveTargetArchitecture } from './target-architecture.mjs';
 
 const env = { ...process.env };
 const builderArgs = process.argv.slice(2);
-const targetArchitecture = resolveTargetArchitecture({ environment: env, builderArgs });
 
-if (process.platform === 'win32' && !env.CSC_LINK && !env.WINDOWS_CSC_LINK) {
+if (!env.CSC_LINK && !env.WINDOWS_CSC_LINK) {
   env.CSC_IDENTITY_AUTO_DISCOVERY = 'false';
   console.log('[electron] Windows code signing disabled; building unsigned installer.');
 }
 
 const bunBinaryCandidates = [
   process.env.npm_execpath,
-  process.env.BUN_INSTALL ? path.join(process.env.BUN_INSTALL, 'bin', process.platform === 'win32' ? 'bun.exe' : 'bun') : null,
-  process.platform === 'win32' ? 'bun.exe' : 'bun',
+  process.env.BUN_INSTALL ? path.join(process.env.BUN_INSTALL, 'bin', 'bun.exe') : null,
+  'bun.exe',
+  'bun',
 ].filter(Boolean);
 
 const bunBinary = bunBinaryCandidates.find((candidate) => {
@@ -23,12 +22,10 @@ const bunBinary = bunBinaryCandidates.find((candidate) => {
     return candidate === 'bun' || candidate === 'bun.exe' || fs.existsSync(candidate);
   }
   return false;
-}) || (process.platform === 'win32' ? 'bun.exe' : 'bun');
+}) || 'bun.exe';
 
-if (process.platform === 'linux' && !builderArgs.some((argument) => (
-  argument === '--x64' || argument === '--arm64' || argument === '--arch' || argument.startsWith('--arch=')
-))) {
-  builderArgs.push(`--${targetArchitecture.electronBuilder}`);
+if (!builderArgs.includes('--win') && !builderArgs.some((argument) => argument.startsWith('--win'))) {
+  builderArgs.unshift('--win');
 }
 
 const child = spawn(bunBinary, ['x', 'electron-builder', ...builderArgs], {

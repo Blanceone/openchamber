@@ -8,7 +8,6 @@ import { GitSettings } from './GitSettings';
 import { NotificationSettings } from './NotificationSettings';
 import { GitHubSettings } from './GitHubSettings';
 import { VoiceSettings } from './VoiceSettings';
-import { TunnelSettings } from './TunnelSettings';
 import { OpenCodeCliSettings } from './OpenCodeCliSettings';
 import { DesktopNetworkSettings } from './DesktopNetworkSettings';
 import { KeyboardShortcutsSettings } from './KeyboardShortcutsSettings';
@@ -80,8 +79,6 @@ export const OpenChamberPage: React.FC<OpenChamberPageProps> = ({ section }) => 
                 return <NotificationSectionContent />;
             case 'voice':
                 return <VoiceSectionContent />;
-            case 'tunnel':
-                return <TunnelSectionContent />;
             default:
                 return null;
         }
@@ -97,7 +94,6 @@ export const OpenChamberPage: React.FC<OpenChamberPageProps> = ({ section }) => 
         github: t('settings.page.git.title'),
         notifications: t('settings.page.notifications.title'),
         voice: t('settings.page.voice.title'),
-        tunnel: t('settings.page.tunnel.title'),
     }[section];
 
     const pageDescription = {
@@ -110,7 +106,6 @@ export const OpenChamberPage: React.FC<OpenChamberPageProps> = ({ section }) => 
         github: undefined,
         notifications: t('settings.page.notifications.description'),
         voice: t('settings.page.voice.description'),
-        tunnel: t('settings.page.tunnel.description'),
     }[section];
 
     return (
@@ -245,11 +240,4 @@ const VoiceSectionContent: React.FC = () => {
         return null;
     }
     return <VoiceSettings />;
-};
-
-const TunnelSectionContent: React.FC = () => {
-    if (isVSCodeRuntime()) {
-        return null;
-    }
-    return <TunnelSettings />;
 };

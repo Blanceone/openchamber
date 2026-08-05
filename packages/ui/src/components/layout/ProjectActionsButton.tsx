@@ -12,11 +12,9 @@ import { Icon } from "@/components/icon/Icon";
 import { cn } from '@/lib/utils';
 import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { useDeviceInfo } from '@/lib/device';
-import { isDesktopShell } from '@/lib/desktop';
 import { useUIStore } from '@/stores/useUIStore';
 import { useTerminalStore } from '@/stores/useTerminalStore';
 import { useThemeSystem } from '@/contexts/useThemeSystem';
-import { useDesktopSshStore } from '@/stores/useDesktopSshStore';
 import { openExternalUrl } from '@/lib/url';
 import { useI18n } from '@/lib/i18n';
 import {
@@ -28,7 +26,6 @@ import {
   normalizeProjectActionDirectory,
   PROJECT_ACTIONS_UPDATED_EVENT,
   PROJECT_ACTION_ICON_MAP,
-  resolveProjectActionDesktopForwardUrl,
   toProjectActionRunKey,
 } from '@/lib/projectActions';
 import { detectDevServerCommand, readPackageJsonScripts } from '@/lib/detectDevServer';
@@ -152,9 +149,6 @@ export const ProjectActionsButton = ({
   const { currentTheme } = useThemeSystem();
   const { terminal, runtime } = useRuntimeAPIs();
   const { isMobile } = useDeviceInfo();
-  const isDesktopShellApp = React.useMemo(() => isDesktopShell(), []);
-  const desktopSshInstances = useDesktopSshStore((state) => state.instances);
-  const loadDesktopSsh = useDesktopSshStore((state) => state.load);
 
   const terminalShell = useUIStore((state) => state.terminalShell);
   const terminalLoginShell = useUIStore((state) => state.terminalLoginShells.includes(state.terminalShell));
@@ -194,13 +188,6 @@ export const ProjectActionsButton = ({
     }
     return { id: projectId, path: projectPath };
   }, [projectId, projectPath]);
-
-  React.useEffect(() => {
-    if (!isDesktopShellApp) {
-      return;
-    }
-    void loadDesktopSsh().catch(() => undefined);
-  }, [isDesktopShellApp, loadDesktopSsh]);
 
   const openExternal = React.useCallback(async (url: string) => {
     await openExternalUrl(url);
@@ -515,13 +502,7 @@ export const ProjectActionsButton = ({
         );
       streamCleanupByRunKeyRef.current[key] = subscription.close;
 
-      const hasDesktopForwardSelection = discovered.autoOpenUrl === true
-        && isDesktopShellApp
-        && (discovered.desktopOpenSshForward || '').trim().length > 0;
       const manualOpenUrl = discovered.autoOpenUrl ? normalizeManualOpenUrl(discovered.openUrl) : null;
-      const desktopForwardUrl = discovered.autoOpenUrl && isDesktopShellApp
-        ? resolveProjectActionDesktopForwardUrl(discovered.desktopOpenSshForward, desktopSshInstances)
-        : null;
 
       setProjectActionRun({
         key,
@@ -548,7 +529,7 @@ export const ProjectActionsButton = ({
 
       urlWatchByRunKeyRef.current[key] = {
         lastSeenChunkId: null,
-        openedUrl: Boolean(desktopForwardUrl) || Boolean(manualOpenUrl) || hasCustomOpenUrl,
+        openedUrl: Boolean(manualOpenUrl) || hasCustomOpenUrl,
         tail: '',
         openInPreview: discovered.id === AUTO_DISCOVER_ACTION_ID,
       };
@@ -556,20 +537,13 @@ export const ProjectActionsButton = ({
       const normalizedCommand = stripControlChars(discovered.command.trim().replace(/\r\n|\r/g, '\n'));
       await terminal.sendInput(activeSessionId, `${normalizedCommand}\r`);
 
-      if (desktopForwardUrl) {
-        setTabPreviewUrl(normalizedDirectory, tabId, null, { locked: true });
-        void openExternal(desktopForwardUrl);
-        toast.success(t('projectActions.toast.openedForwardedUrl'));
-      } else if (manualOpenUrl) {
+      if (manualOpenUrl) {
         setTabPreviewUrl(normalizedDirectory, tabId, manualOpenUrl, { locked: true, autoOpened: true });
         openContextPreview(normalizedDirectory, manualOpenUrl);
         toast.success(t('projectActions.toast.openedActionUrl'));
       } else if (hasCustomOpenUrl) {
         setTabPreviewUrl(normalizedDirectory, tabId, null, { locked: true });
         toast.error(t('projectActions.error.invalidCustomUrlFormat'));
-      } else if (hasDesktopForwardSelection) {
-        setTabPreviewUrl(normalizedDirectory, tabId, null, { locked: true });
-        toast.error(t('projectActions.error.selectedDesktopSshForwardUnavailable'));
       } else {
         setTabPreviewUrl(normalizedDirectory, tabId, null, { locked: false, autoOpened: false });
       }
@@ -589,11 +563,9 @@ export const ProjectActionsButton = ({
     currentTheme.colors.surface.background,
     currentTheme.colors.syntax.base.foreground,
     currentTheme.metadata.variant,
-    desktopSshInstances,
     getOrCreateActionTab,
     allowMobile,
     isMobile,
-    isDesktopShellApp,
     normalizedDirectory,
     terminalLoginShell,
     terminalShell,

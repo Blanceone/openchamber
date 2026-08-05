@@ -13,7 +13,6 @@ const PACKAGE_PATH_SEGMENTS = PACKAGE_NAME.split('/');
 const NPM_REGISTRY_URL = `https://registry.npmjs.org/${PACKAGE_NAME}`;
 const CHANGELOG_URL = 'https://raw.githubusercontent.com/openchamber/openchamber/main/CHANGELOG.md';
 const GITHUB_RELEASES_URL = 'https://github.com/openchamber/openchamber/releases';
-const GITHUB_RELEASES_API_URL = 'https://api.github.com/repos/openchamber/openchamber/releases';
 let cachedDetectedPm = null;
 
 function getSpawnSyncBaseOptions() {
@@ -31,7 +30,7 @@ function getOpenChamberConfigDir() {
 }
 
 function sanitizeInstallScope(scope) {
-  if (scope === 'desktop-electron' || scope === 'vscode' || scope === 'web' || scope === 'mobile-capacitor') return scope;
+  if (scope === 'desktop-electron' || scope === 'web') return scope;
   return 'web';
 }
 
@@ -67,7 +66,7 @@ function mapArch(value) {
 }
 
 function normalizeAppType(value) {
-  if (value === 'web' || value === 'desktop-electron' || value === 'vscode' || value === 'mobile-capacitor') return value;
+  if (value === 'web' || value === 'desktop-electron') return value;
   return 'web';
 }
 
@@ -86,46 +85,12 @@ function normalizeArch(value) {
   return mapArch(process.arch);
 }
 
-async function resolveAndroidApkUrl(version, candidateUrl) {
-  if (typeof candidateUrl === 'string') {
-    try {
-      if (new URL(candidateUrl).pathname.toLowerCase().endsWith('.apk')) return candidateUrl;
-    } catch {
-      // Resolve malformed or non-APK values from the authoritative release assets below.
-    }
-  }
-
-  try {
-    const response = await fetch(`${GITHUB_RELEASES_API_URL}/tags/v${version}`, {
-      headers: {
-        Accept: 'application/vnd.github+json',
-        'User-Agent': 'openchamber-update-check',
-      },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!response.ok) return undefined;
-
-    const release = await response.json();
-    const apkAssets = Array.isArray(release?.assets)
-      ? release.assets.filter((asset) => (
-        typeof asset?.name === 'string'
-        && asset.name.toLowerCase().endsWith('.apk')
-        && typeof asset.browser_download_url === 'string'
-      ))
-      : [];
-    const canonicalAsset = apkAssets.find((asset) => /^OpenChamber-.+-android\.apk$/i.test(asset.name));
-    return (canonicalAsset || apkAssets[0])?.browser_download_url;
-  } catch {
-    return undefined;
-  }
-}
-
 async function checkForUpdatesFromApi(currentVersion, options = {}) {
   try {
     const appType = normalizeAppType(options.appType);
     const hostPlatform = mapPlatform(process.platform);
     const hostArch = mapArch(process.arch);
-    const shouldTrustClientPlatform = appType === 'desktop-electron' || appType === 'vscode' || appType === 'mobile-capacitor';
+    const shouldTrustClientPlatform = appType === 'desktop-electron';
     const platform = shouldTrustClientPlatform ? normalizePlatform(options.platform) : hostPlatform;
     const arch = shouldTrustClientPlatform ? normalizeArch(options.arch) : hostArch;
     const reportUsage = options.reportUsage !== false;
@@ -165,16 +130,13 @@ async function checkForUpdatesFromApi(currentVersion, options = {}) {
         ? data.download.url
         : undefined;
     const updateAvailable = Boolean(data.updateAvailable) && versionComparison > 0;
-    const mobileDownloadUrl = updateAvailable && appType === 'mobile-capacitor' && platform === 'android'
-      ? await resolveAndroidApkUrl(data.latestVersion, downloadUrl)
-      : undefined;
     return {
       available: updateAvailable,
       version: data.latestVersion,
       currentVersion,
       body: typeof data.releaseNotes === 'string' ? data.releaseNotes : undefined,
       releaseUrl: typeof data.releaseNotesUrl === 'string' ? data.releaseNotesUrl : releaseUrl,
-      downloadUrl: mobileDownloadUrl,
+      downloadUrl: updateAvailable ? downloadUrl : undefined,
       nextSuggestedCheckInSec:
         typeof data.nextSuggestedCheckInSec === 'number' && Number.isFinite(data.nextSuggestedCheckInSec)
           ? data.nextSuggestedCheckInSec
@@ -802,12 +764,8 @@ export async function checkForUpdates(options = {}) {
 
   const available = compareVersions(latestVersion, currentVersion) > 0;
   let changelog;
-  let downloadUrl;
   if (available) {
     changelog = await fetchChangelogNotes(currentVersion, latestVersion);
-    if (appType === 'mobile-capacitor' && platform === 'android') {
-      downloadUrl = await resolveAndroidApkUrl(latestVersion);
-    }
   }
 
   return {
@@ -816,7 +774,6 @@ export async function checkForUpdates(options = {}) {
     currentVersion,
     body: changelog,
     releaseUrl: `${GITHUB_RELEASES_URL}/tag/v${latestVersion}`,
-    downloadUrl,
     packageManager: pm,
     // Show our CLI command, not raw package manager command
     updateCommand: 'openchamber update',

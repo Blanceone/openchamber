@@ -35,7 +35,6 @@ import { useRuntimeAPIs } from '@/hooks/useRuntimeAPIs';
 import { useDesktopWindowControlsLayout } from '@/hooks/useDesktopWindowControlsLayout';
 import { ContextUsageDisplay } from '@/components/ui/ContextUsageDisplay';
 import { WindowsWindowControls } from '@/components/desktop/WindowsWindowControls';
-import { UpdateDialog } from '@/components/ui/UpdateDialog';
 import { useDeviceInfo, useTabletStandalonePwaRuntime } from '@/lib/device';
 import { cn, hasModifier } from '@/lib/utils';
 import { McpDropdownContent } from '@/components/mcp/McpDropdown';
@@ -63,13 +62,11 @@ import {
 import type { UsageWindow } from '@/types';
 import type { GitHubAuthStatus } from '@/lib/api/types';
 import type { SessionContextUsage } from '@/stores/types/sessionTypes';
-import { DesktopHostSwitcherDialog } from '@/components/desktop/DesktopHostSwitcher';
 import { OpenInAppButton } from '@/components/desktop/OpenInAppButton';
 import { useTerminalStore } from '@/stores/useTerminalStore';
 import { ProjectActionsButton } from '@/components/layout/ProjectActionsButton';
 import { SessionSwitcherDropdown } from '@/components/session/SessionSwitcherDropdown';
-import { canUseElectronDesktopIPC, invokeDesktop, isDesktopLocalOriginActive, isDesktopShell, isVSCodeRuntime, startDesktopWindowDrag, type UpdateInfo } from '@/lib/desktop';
-import { desktopHostsGet, getDesktopHostApiUrl, locationMatchesHost, redactSensitiveUrl } from '@/lib/desktopHosts';
+import { canUseElectronDesktopIPC, invokeDesktop, isDesktopShell, isVSCodeRuntime, startDesktopWindowDrag } from '@/lib/desktop';
 import { Icon } from "@/components/icon/Icon";
 import { useI18n } from '@/lib/i18n';
 import { runtimeFetch } from '@/lib/runtime-fetch';
@@ -263,14 +260,10 @@ const DesktopGitHubControl = React.memo(function DesktopGitHubControl({
 
 type DesktopServicesMenuProps = {
   isDesktopApp: boolean;
-  currentInstanceLabel: string;
-  compactCurrentInstanceLabel: string;
-  currentInstanceIsLocal: boolean;
   isDesktopServicesOpen: boolean;
   setIsDesktopServicesOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  refreshCurrentInstanceLabel: () => Promise<void>;
-  desktopServicesTab: 'instance' | 'usage' | 'mcp';
-  setDesktopServicesTab: React.Dispatch<React.SetStateAction<'instance' | 'usage' | 'mcp'>>;
+  desktopServicesTab: 'usage' | 'mcp';
+  setDesktopServicesTab: React.Dispatch<React.SetStateAction<'usage' | 'mcp'>>;
   quotaResultsLength: number;
   fetchAllQuotas: () => Promise<unknown>;
   servicesTabItems: SortableTabsStripItem[];
@@ -289,22 +282,14 @@ type DesktopServicesMenuProps = {
   showDevShutdown: boolean;
   isDevShutdownInFlight: boolean;
   onDevShutdown: () => Promise<void>;
-  remoteUpdateInfo: UpdateInfo | null;
-  remoteUpdateChecking: boolean;
-  remoteUpdateError: string | null;
-  onOpenRemoteUpdate: () => void;
   showPredValues: boolean;
   timeFormatPreference: TimeFormatPreference;
 };
 
 const DesktopServicesMenu = React.memo(function DesktopServicesMenu({
   isDesktopApp,
-  currentInstanceLabel,
-  compactCurrentInstanceLabel,
-  currentInstanceIsLocal,
   isDesktopServicesOpen,
   setIsDesktopServicesOpen,
-  refreshCurrentInstanceLabel,
   desktopServicesTab,
   setDesktopServicesTab,
   quotaResultsLength,
@@ -325,10 +310,6 @@ const DesktopServicesMenu = React.memo(function DesktopServicesMenu({
   showDevShutdown,
   isDevShutdownInFlight,
   onDevShutdown,
-  remoteUpdateInfo,
-  remoteUpdateChecking,
-  remoteUpdateError,
-  onOpenRemoteUpdate,
   showPredValues,
   timeFormatPreference,
 }: DesktopServicesMenuProps) {
@@ -338,11 +319,8 @@ const DesktopServicesMenu = React.memo(function DesktopServicesMenu({
       open={isDesktopServicesOpen}
       onOpenChange={(open) => {
         setIsDesktopServicesOpen(open);
-        if (open) {
-          void refreshCurrentInstanceLabel();
-          if (desktopServicesTab === 'usage' && quotaResultsLength === 0) {
-            void fetchAllQuotas();
-          }
+        if (open && desktopServicesTab === 'usage' && quotaResultsLength === 0) {
+          void fetchAllQuotas();
         }
       }}
     >
@@ -351,18 +329,10 @@ const DesktopServicesMenu = React.memo(function DesktopServicesMenu({
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              aria-label={isDesktopApp
-                ? t('header.services.openWithCurrent', { current: currentInstanceLabel })
-                : t('header.services.open')}
-              className={cn(
-                DESKTOP_HEADER_ICON_BUTTON_CLASS,
-                isDesktopApp ? 'w-auto max-w-[14rem] justify-start gap-1.5 px-2.5' : 'h-8 w-8'
-              )}
+              aria-label={t('header.services.open')}
+              className={DESKTOP_HEADER_ICON_BUTTON_CLASS}
             >
               <Icon name="stack" className="h-[18px] w-[18px]" />
-              {isDesktopApp ? (
-                <span className="truncate typography-ui-label font-medium text-foreground">{compactCurrentInstanceLabel}</span>
-              ) : null}
             </button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
@@ -370,7 +340,7 @@ const DesktopServicesMenu = React.memo(function DesktopServicesMenu({
           <p>
             {isDesktopApp
               ? t('header.services.tooltip.currentInstanceWithShortcuts', {
-                  current: currentInstanceLabel,
+                  current: 'Local OpenChamber',
                   toggle: shortcutLabel('toggle_services_menu'),
                   nextTab: shortcutLabel('cycle_services_tab'),
                 })
@@ -391,7 +361,7 @@ const DesktopServicesMenu = React.memo(function DesktopServicesMenu({
               items={servicesTabItems}
               activeId={desktopServicesTab}
               onSelect={(tabID) => {
-                const value = tabID as 'instance' | 'usage' | 'mcp';
+                const value = tabID as 'usage' | 'mcp';
                 setDesktopServicesTab(value);
                 if (value === 'usage' && quotaResultsLength === 0) {
                   void fetchAllQuotas();
@@ -405,42 +375,6 @@ const DesktopServicesMenu = React.memo(function DesktopServicesMenu({
             />
           </div>
         </div>
-
-        {isDesktopApp && desktopServicesTab === 'instance' ? (
-          <div>
-            {!currentInstanceIsLocal ? (
-              <div className="border-b border-[var(--interactive-border)] px-4 py-2.5">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="typography-ui-label font-medium text-foreground">{t('header.services.remoteUpdate.title')}</div>
-                    <div className="typography-micro text-muted-foreground">
-                      {remoteUpdateInfo?.available
-                        ? t('header.services.remoteUpdate.available', { version: remoteUpdateInfo.version || '' })
-                        : remoteUpdateChecking
-                          ? t('header.services.remoteUpdate.checking')
-                          : remoteUpdateError || t('header.services.remoteUpdate.upToDate')}
-                    </div>
-                  </div>
-                  {remoteUpdateInfo?.available ? (
-                    <button
-                      type="button"
-                      className="shrink-0 rounded-md bg-[var(--primary-base)] px-3 py-1.5 typography-ui-label font-medium text-[var(--primary-foreground)] hover:opacity-90"
-                      onClick={onOpenRemoteUpdate}
-                    >
-                      {t('header.services.remoteUpdate.actions.open')}
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-            ) : null}
-            <DesktopHostSwitcherDialog
-              embedded
-              open={isDesktopServicesOpen && desktopServicesTab === 'instance'}
-              onOpenChange={() => {}}
-              onHostSwitched={() => setIsDesktopServicesOpen(false)}
-            />
-          </div>
-        ) : null}
 
         {desktopServicesTab === 'mcp' ? (
           <McpDropdownContent active={isDesktopServicesOpen && desktopServicesTab === 'mcp'} />
@@ -633,26 +567,6 @@ const isSameContextUsage = (
     && (a.normalizedOutput ?? 0) === (b.normalizedOutput ?? 0)
     && a.thresholdLimit === b.thresholdLimit
     && (a.lastMessageId ?? '') === (b.lastMessageId ?? '');
-};
-
-const formatCompactHeaderLabel = (value: string): string => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return '';
-  }
-
-  const words = trimmed.split(/\s+/).filter(Boolean);
-  if (words.length >= 2) {
-    const first = words[0];
-    const second = words[1].slice(0, 3);
-    const shortTwoWord = `${first} ${second}`.trim();
-    if (words.length > 2 || shortTwoWord.length < trimmed.length) {
-      return `${shortTwoWord}...`;
-    }
-    return shortTwoWord;
-  }
-
-  return trimmed.length > 12 ? `${trimmed.slice(0, 9).trimEnd()}...` : trimmed;
 };
 
 const formatTime = (timestamp: number | null, timeFormatPreference: 'auto' | '12h' | '24h') => {
@@ -887,156 +801,14 @@ export const Header: React.FC<HeaderProps> = ({
   const [isMobileRateLimitsOpen, setIsMobileRateLimitsOpen] = React.useState(false);
   const [isDesktopServicesOpen, setIsDesktopServicesOpen] = React.useState(false);
   const [isUsageRefreshSpinning, setIsUsageRefreshSpinning] = React.useState(false);
-  const [currentInstanceLabel, setCurrentInstanceLabel] = React.useState('Local');
-  const [currentInstanceIsLocal, setCurrentInstanceIsLocal] = React.useState(true);
-  const [remoteUpdateDialogOpen, setRemoteUpdateDialogOpen] = React.useState(false);
-  const [remoteUpdateInfo, setRemoteUpdateInfo] = React.useState<UpdateInfo | null>(null);
-  const [remoteUpdateChecking, setRemoteUpdateChecking] = React.useState(false);
-  const [remoteUpdateError, setRemoteUpdateError] = React.useState<string | null>(null);
-  const compactCurrentInstanceLabel = React.useMemo(() => formatCompactHeaderLabel(currentInstanceLabel), [currentInstanceLabel]);
-  const [desktopServicesTab, setDesktopServicesTab] = React.useState<'instance' | 'usage' | 'mcp'>(
-    isDesktopApp ? 'instance' : 'usage'
-  );
+  const [desktopServicesTab, setDesktopServicesTab] = React.useState<'usage' | 'mcp'>('usage');
   const [mobileServicesTab, setMobileServicesTab] = React.useState<'usage' | 'mcp'>('usage');
-  useEffect(() => {
-    if (!isDesktopApp && desktopServicesTab === 'instance') {
-      setDesktopServicesTab('usage');
-    }
-  }, [desktopServicesTab, isDesktopApp]);
 
   const isVSCode = React.useMemo(() => isVSCodeRuntime(), []);
   const showDesktopHeaderContextUsage = !isVSCode && activeMainTab === 'chat' && !!stableDesktopContextUsage && stableDesktopContextUsage.totalTokens > 0;
   const desktopHeaderDisplayPercentage = stableDesktopContextUsage && stableDesktopContextUsage.contextLimit > 0
     ? Math.min(999, (stableDesktopContextUsage.totalTokens / stableDesktopContextUsage.contextLimit) * 100)
     : 0;
-
-  const refreshCurrentInstanceLabel = React.useCallback(async () => {
-    if (typeof window === 'undefined' || !isDesktopApp) {
-      return;
-    }
-
-    try {
-      if (isDesktopLocalOriginActive()) {
-        setCurrentInstanceLabel('Local');
-        setCurrentInstanceIsLocal(true);
-        return;
-      }
-      setCurrentInstanceIsLocal(false);
-
-      const cfg = await desktopHostsGet();
-      const localOrigin = window.__OPENCHAMBER_LOCAL_ORIGIN__ || window.location.origin;
-      const runtimeApiBaseUrl = getRuntimeApiBaseUrl();
-
-      if (runtimeApiBaseUrl && locationMatchesHost(runtimeApiBaseUrl, localOrigin)) {
-        setCurrentInstanceLabel('Local');
-        setCurrentInstanceIsLocal(true);
-        return;
-      }
-
-      const match = cfg.hosts.find((host) => {
-        return runtimeApiBaseUrl ? locationMatchesHost(runtimeApiBaseUrl, getDesktopHostApiUrl(host)) : false;
-      });
-
-      if (match?.label?.trim()) {
-        setCurrentInstanceLabel(redactSensitiveUrl(match.label.trim()));
-        return;
-      }
-
-      setCurrentInstanceLabel('Instance');
-    } catch {
-      setCurrentInstanceLabel('Local');
-      setCurrentInstanceIsLocal(true);
-    }
-  }, [isDesktopApp]);
-
-  useEffect(() => {
-    void refreshCurrentInstanceLabel();
-  }, [refreshCurrentInstanceLabel]);
-
-  const checkRemoteInstanceUpdate = React.useCallback(async () => {
-    if (currentInstanceIsLocal) {
-      setRemoteUpdateInfo(null);
-      setRemoteUpdateError(null);
-      return;
-    }
-
-    setRemoteUpdateChecking(true);
-    setRemoteUpdateError(null);
-    try {
-      // Status-only poll: must not count as usage on the remote server's install id.
-      const params = new URLSearchParams({ appType: 'web', instanceMode: 'remote', reportUsage: 'false' });
-      const response = await runtimeFetch(`/api/openchamber/update-check?${params.toString()}`, {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-      });
-      if (!response.ok) {
-        throw new Error(`Server responded with ${response.status}`);
-      }
-      const data = await response.json();
-      setRemoteUpdateInfo({
-        available: data.available ?? false,
-        version: data.version,
-        currentVersion: data.currentVersion ?? 'unknown',
-        body: data.body,
-        nextSuggestedCheckInSec: typeof data.nextSuggestedCheckInSec === 'number' ? data.nextSuggestedCheckInSec : undefined,
-        packageManager: data.packageManager,
-        updateCommand: data.updateCommand,
-      });
-    } catch (error) {
-      setRemoteUpdateInfo(null);
-      setRemoteUpdateError(error instanceof Error ? error.message : t('header.services.remoteUpdate.error'));
-    } finally {
-      setRemoteUpdateChecking(false);
-    }
-  }, [currentInstanceIsLocal, t]);
-
-  React.useEffect(() => {
-    setRemoteUpdateInfo(null);
-    setRemoteUpdateError(null);
-    setRemoteUpdateDialogOpen(false);
-  }, [currentInstanceIsLocal, currentInstanceLabel]);
-
-  React.useEffect(() => {
-    if (!isDesktopApp || currentInstanceIsLocal) {
-      return;
-    }
-
-    const initialDelayMs = 3000;
-    const intervalMs = 60 * 60 * 1000;
-    let disposed = false;
-    let timer: number | null = null;
-
-    const schedule = (delayMs: number) => {
-      timer = window.setTimeout(() => {
-        if (disposed || (typeof document !== 'undefined' && document.visibilityState !== 'visible')) {
-          schedule(intervalMs);
-          return;
-        }
-        void checkRemoteInstanceUpdate().finally(() => {
-          if (!disposed) {
-            schedule(intervalMs);
-          }
-        });
-      }, delayMs);
-    };
-
-    schedule(initialDelayMs);
-
-    return () => {
-      disposed = true;
-      if (timer !== null) {
-        window.clearTimeout(timer);
-      }
-    };
-  }, [checkRemoteInstanceUpdate, currentInstanceIsLocal, currentInstanceLabel, isDesktopApp]);
-
-  const openRemoteInstanceUpdate = React.useCallback(() => {
-    if (remoteUpdateInfo?.available) {
-      setRemoteUpdateDialogOpen(true);
-      return;
-    }
-    void checkRemoteInstanceUpdate();
-  }, [checkRemoteInstanceUpdate, remoteUpdateInfo?.available]);
 
   useQuotaAutoRefresh();
   const selectedModels = useQuotaStore((state) => state.selectedModels);
@@ -1949,16 +1721,11 @@ export const Header: React.FC<HeaderProps> = ({
   }, [activeMainTab, isMobile, setActiveMainTab]);
 
   const servicesTabs = React.useMemo(() => {
-    const base: Array<{ value: 'instance' | 'usage' | 'mcp'; label: string; icon: React.ReactNode }> = [];
-    if (isDesktopApp) {
-      base.push({ value: 'instance', label: t('layout.services.instance'), icon: <Icon name="server" className="h-3.5 w-3.5" /> });
-    }
-    base.push(
-      { value: 'usage', label: t('layout.services.usage'), icon: <Icon name="timer" className="h-3.5 w-3.5" /> },
-      { value: 'mcp', label: 'MCP', icon: <McpIcon className="h-3.5 w-3.5" /> }
-    );
-    return base;
-  }, [isDesktopApp, t]);
+    return [
+      { value: 'usage' as const, label: t('layout.services.usage'), icon: <Icon name="timer" className="h-3.5 w-3.5" /> },
+      { value: 'mcp' as const, label: 'MCP', icon: <McpIcon className="h-3.5 w-3.5" /> },
+    ];
+  }, [t]);
 
   const servicesTabItems = React.useMemo(() => {
     return servicesTabs.map((tab) => ({
@@ -2071,7 +1838,6 @@ export const Header: React.FC<HeaderProps> = ({
           setIsDesktopServicesOpen(false);
         } else {
           setIsDesktopServicesOpen(true);
-          void refreshCurrentInstanceLabel();
           if (desktopServicesTab === 'usage' && quotaResults.length === 0) {
             void fetchAllQuotas();
           }
@@ -2083,7 +1849,7 @@ export const Header: React.FC<HeaderProps> = ({
       if (eventMatchesShortcut(e, cycleServicesCombo)) {
         e.preventDefault();
 
-        const tabValues = servicesTabs.map((tab) => tab.value) as Array<'instance' | 'usage' | 'mcp'>;
+        const tabValues = servicesTabs.map((tab) => tab.value) as Array<'usage' | 'mcp'>;
         if (tabValues.length === 0) {
           return;
         }
@@ -2093,7 +1859,6 @@ export const Header: React.FC<HeaderProps> = ({
         const nextTab = tabValues[nextIndex];
         setDesktopServicesTab(nextTab);
         setIsDesktopServicesOpen(true);
-        void refreshCurrentInstanceLabel();
         if (nextTab === 'usage' && quotaResults.length === 0) {
           void fetchAllQuotas();
         }
@@ -2116,7 +1881,6 @@ export const Header: React.FC<HeaderProps> = ({
     servicesTabs,
     quotaResults.length,
     fetchAllQuotas,
-    refreshCurrentInstanceLabel,
     handleOpenContextPlan,
   ]);
 
@@ -2174,12 +1938,8 @@ export const Header: React.FC<HeaderProps> = ({
       <OpenInAppButton directory={actionDirectory} className="mr-1" />
       <DesktopServicesMenu
         isDesktopApp={isDesktopApp}
-        currentInstanceLabel={currentInstanceLabel}
-        compactCurrentInstanceLabel={compactCurrentInstanceLabel}
-        currentInstanceIsLocal={currentInstanceIsLocal}
         isDesktopServicesOpen={isDesktopServicesOpen}
         setIsDesktopServicesOpen={setIsDesktopServicesOpen}
-        refreshCurrentInstanceLabel={refreshCurrentInstanceLabel}
         desktopServicesTab={desktopServicesTab}
         setDesktopServicesTab={setDesktopServicesTab}
         quotaResultsLength={quotaResults.length}
@@ -2201,10 +1961,6 @@ export const Header: React.FC<HeaderProps> = ({
         showDevShutdown={showDevShutdown}
         isDevShutdownInFlight={isDevShutdownInFlight}
         onDevShutdown={handleDevShutdown}
-        remoteUpdateInfo={remoteUpdateInfo}
-        remoteUpdateChecking={remoteUpdateChecking}
-        remoteUpdateError={remoteUpdateError}
-        onOpenRemoteUpdate={openRemoteInstanceUpdate}
         timeFormatPreference={timeFormatPreference}
       />
       <DesktopGitHubControl
@@ -2906,18 +2662,6 @@ export const Header: React.FC<HeaderProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <UpdateDialog
-        open={remoteUpdateDialogOpen}
-        onOpenChange={setRemoteUpdateDialogOpen}
-        info={remoteUpdateInfo}
-        downloading={false}
-        downloaded={false}
-        progress={null}
-        error={remoteUpdateError}
-        onDownload={() => {}}
-        onRestart={() => {}}
-        runtimeType="web"
-      />
     </>
   );
 };

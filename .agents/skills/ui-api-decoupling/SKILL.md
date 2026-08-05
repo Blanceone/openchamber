@@ -41,7 +41,7 @@ Load every matching reference before editing.
 4. **Resolve runtime state at call time.** Do not cache runtime base URLs, resolver output, credentials, or SDK clients across endpoint switches.
 5. **Let transport own auth.** HTTP uses runtime bearer handling; browser/realtime URLs use scoped short-lived URL auth where headers are impossible.
 6. **Never put long-lived client credentials in URLs.** Do not manually append URL tokens.
-7. **Define runtime parity explicitly.** Shared UI needs deliberate web, Electron, VS Code, hosted-mobile, and Capacitor behavior or stable unsupported responses.
+7. **Define runtime parity explicitly.** Shared UI needs deliberate Windows desktop / Electron / web-server behavior or stable unsupported responses.
 8. **Authoritative fetches must signal failure.** Do not convert failure into a valid empty value that callers use to clear state.
 9. **Keep privileges at the native/runtime boundary.** UI visibility and prompts are not authorization.
 10. **Confirm trust-boundary mutations.** Host imports, credential writes, privileged deep links, and runtime switching require explicit user intent.
@@ -77,7 +77,7 @@ Review runtime base URL, auth, SDK clients, terminal/realtime transports, stores
 | Component reads runtime globals | `useRuntimeAPIs()` / provider |
 | Hardcoded runtime URL | `runtimeFetch` or runtime URL resolver |
 | Browser URL containing bearer/client token | Scoped URL-auth helper |
-| Web-only shared route | Explicit VS Code/mobile decision |
+| Web-only shared route | Explicit desktop decision |
 | Returning `[]` after authoritative fetch failure | Throw or distinct failure result |
 | Rebuilding SDK `Request` from URL only | Preserve original request body/headers/signal |
 

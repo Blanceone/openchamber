@@ -13,7 +13,7 @@
 export const DEEP_LINK_SCHEME = 'openchamber';
 
 export type SessionsFilter = 'all' | 'attention' | 'recent';
-export type ViewTarget = 'files' | 'mcp' | 'instances' | 'update';
+export type ViewTarget = 'files' | 'mcp' | 'update';
 
 /**
  * Every navigable destination the app exposes to the outside world. New widget/notification
@@ -114,7 +114,7 @@ export function parseDeepLink(raw: string | null | undefined): DeepLinkIntent | 
       if (target === 'changes') {
         return { type: 'changes' };
       }
-      if (target === 'files' || target === 'mcp' || target === 'instances' || target === 'update') {
+      if (target === 'files' || target === 'mcp' || target === 'update') {
         return { type: 'view', target };
       }
       return null;

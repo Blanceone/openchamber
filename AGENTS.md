@@ -2,7 +2,7 @@
 
 ## Purpose
 
-OpenChamber provides shared web, desktop, VS Code, hosted-mobile, and native-mobile UI surfaces for OpenCode.
+OpenChamber provides a Windows Electron desktop UI and in-process server for OpenCode.
 
 This file contains only always-on repository rules and routing. Detailed workflows belong to project skills and module documentation.
 
@@ -22,18 +22,15 @@ read. Skill loading is a required part of the task, not optional guidance.
 
 ## Runtime Boundaries
 
-- `packages/ui`: shared React UI, state, sync, and runtime contracts.
-- `packages/web`: web surfaces, OpenChamber server, managed/external OpenCode lifecycle, and CLI.
-- `packages/electron`: native desktop shell and privileged Electron boundary.
-- `packages/vscode`: extension host, webview, and runtime bridge.
-- `packages/mobile`: Capacitor iOS/Android shell; bundles the mobile web surface and connects to an existing OpenChamber server.
-- `packages/docs`: product documentation; not a Bun workspace.
+- `packages/ui`: shared React UI, state, sync, and runtime contracts (desktop surface).
+- `packages/web`: OpenChamber server, managed/external OpenCode lifecycle, CLI, and Vite UI assets consumed by Electron.
+- `packages/electron`: native Windows desktop shell and privileged Electron boundary.
 
 Shared UI calls official OpenCode APIs through `@opencode-ai/sdk/v2`. OpenChamber-owned capabilities use `RuntimeAPIs`, `runtimeFetch`, and shared browser/realtime transport helpers. Server-side upstream integrations may use their owning runtime modules.
 
 Electron starts the OpenChamber backend in-process, never as a sidecar. Development may load loopback/HMR UI; packaged builds load staged assets through `openchamber-ui://` while the loopback server remains the API backend. Keep domain backends in web/runtime modules unless behavior is inherently native.
 
-Shared contracts must define intentional behavior for every applicable runtime: web, desktop, VS Code, hosted mobile, and Capacitor mobile.
+Shared contracts must define intentional behavior for the Windows desktop runtime. Do not reintroduce VS Code, Capacitor mobile, or multi-OS packaging surfaces unless explicitly requested.
 
 ## Always-On Constraints
 
@@ -66,9 +63,7 @@ High-value anchors:
 - Stores: `packages/ui/src/stores/DOCUMENTATION.md`
 - CLI: `packages/web/bin/lib/DOCUMENTATION.md`
 - Performance measurement tooling: `scripts/perf/DOCUMENTATION.md`
-- VS Code runtime: `packages/vscode/src/DOCUMENTATION.md`
 - Electron: `packages/electron/README.md`
-- Mobile: `packages/mobile/README.md`
 
 ## Project Skills
 
@@ -84,7 +79,7 @@ process violation.
 | Any source, dependency, export, build-config, generated-asset, package-contract, or module-ownership change | `openchamber-change-discipline` |
 | CLI commands, prompts, terminal output, non-TTY, `--quiet`, or `--json` behavior | `clack-cli-patterns` |
 | Shared UI data access, OpenCode SDK, `RuntimeAPIs`, runtime fetch/auth/URLs, bridges/proxies, runtime switching, or server API routes | `ui-api-decoupling` |
-| Electron main/preload, IPC, native UI, updater, deep links, SSH/tunnels, packaging, or child processes | `desktop-shell` |
+| Electron main/preload, IPC, native UI, updater, deep links, packaging, or child processes | `desktop-shell` |
 | Session sync, bootstrap/reconnect, reducers, polling, optimistic state, queues, live status, reconciliation, or directory-scoped caches | `sync-state-invariants` |
 | Render/store/event hot paths, large lists, caching/indexing, high CPU/memory, lag, jank, freezes, or performance regressions | `performance-engineering` |
 | WebSocket, SSE, streaming transport, runtime transport internals, or private relay | `relay-transport` |
@@ -92,7 +87,6 @@ process violation.
 | User-facing or accessible UI text, labels, aria, toasts, dialogs, or navigation copy | `locale-ui-patterns` |
 | Settings UI, settings dialogs, configuration surfaces, or settings search | `settings-ui-patterns` |
 | Sortable or drag-to-reorder behavior, especially `@dnd-kit` and touch/wrapping layouts | `drag-to-reorder` |
-| iOS Simulator build, launch, preview, gestures, or `serve-sim` control | `serve-sim` |
 
 Pure code-reading or explanation does not require implementation skills unless needed to interpret a specialized subsystem.
 

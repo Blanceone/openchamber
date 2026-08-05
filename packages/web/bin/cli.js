@@ -24,8 +24,6 @@ import {
   showHelp,
   showControlHelp,
   showStartupHelp,
-  showConnectUrlHelp,
-  showTunnelHelp,
   generateCompletionScript,
   findClosestMatch,
 } from './lib/cli-args.js';
@@ -39,10 +37,9 @@ import { sessionCommand } from './lib/commands-session.js';
 import { modelsCommand } from './lib/commands-models.js';
 import { projectsCommand } from './lib/commands-projects.js';
 import { createUpdateCommand } from './lib/commands-update.js';
-import { createConnectUrlCommand } from './lib/commands-connect-url.js';
 import { createLifecycleCommands } from './lib/commands-lifecycle.js';
 import { createServeCommand } from './lib/commands-serve.js';
-import { createTunnelCommand, isValidTunnelDoctorResponse, shouldDisplayTunnelQr } from './lib/commands-tunnel.js';
+import { isValidTunnelDoctorResponse, shouldDisplayTunnelQr } from './lib/commands-tunnel.js';
 import {
   resolveDoctorPortStatuses,
   discoverRunningInstances,
@@ -211,17 +208,25 @@ commands.serve = createServeCommand({
   commands.restart = lifecycleCommands.restart;
 }
 
-commands.tunnel = createTunnelCommand({
-  serveCommand: commands.serve.bind(commands),
-  stopCommand: commands.stop.bind(commands),
-  setCancelCleanup,
-  boldText,
-  ensureTunnelProfilesMigrated,
-});
+commands.tunnel = async (options) => {
+  const message = 'openchamber tunnel is disabled in this local-only desktop build.';
+  if (isJsonMode(options)) {
+    printJson({ status: 'error', error: message });
+  } else {
+    console.error(message);
+  }
+  process.exitCode = 1;
+};
 
-commands['connect-url'] = createConnectUrlCommand({
-  serveCommand: commands.serve.bind(commands),
-});
+commands['connect-url'] = async (options) => {
+  const message = 'openchamber connect-url is disabled in this local-only desktop build.';
+  if (isJsonMode(options)) {
+    printJson({ status: 'error', error: message });
+  } else {
+    console.error(message);
+  }
+  process.exitCode = 1;
+};
 
 commands.update = createUpdateCommand({
   importFromFilePath,
@@ -261,12 +266,11 @@ async function main() {
   }
 
   if (helpRequested) {
-    if (command === 'tunnel') {
-      showTunnelHelp();
+    if (command === 'tunnel' || command === 'connect-url') {
+      await commands[command](options);
+      return;
     } else if (command === 'startup') {
       showStartupHelp();
-    } else if (command === 'connect-url') {
-      showConnectUrlHelp();
     } else if (command === 'schedule') {
       await commands.schedule(options, 'help');
     } else if (command === 'session') {

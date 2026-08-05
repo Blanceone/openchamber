@@ -4,7 +4,6 @@ export type SettingsPageSlug =
   | 'home'
   | 'general'
   | 'projects'
-  | 'remote-instances'
   | 'providers'
   | 'usage'
   | 'agents'
@@ -23,7 +22,6 @@ export type SettingsPageSlug =
   | 'snippets'
   | 'notifications'
   | 'voice'
-  | 'tunnel'
   | 'about';
 
 type SettingsPageGroup =
@@ -63,7 +61,7 @@ export const SETTINGS_PAGE_METADATA: readonly SettingsPageMeta[] = [
     title: 'General',
     group: 'general',
     kind: 'single',
-    keywords: ['general', 'startup', 'launch at login', 'autostart', 'tray', 'password', 'passkey', 'security', 'privacy', 'telemetry', 'transport', 'network', 'lan', 'binary', 'cli'],
+    keywords: ['general', 'startup', 'launch at login', 'autostart', 'tray', 'passkey', 'security', 'privacy', 'telemetry', 'transport', 'binary', 'cli'],
   },
   {
     slug: 'projects',
@@ -71,14 +69,6 @@ export const SETTINGS_PAGE_METADATA: readonly SettingsPageMeta[] = [
     group: 'projects',
     kind: 'split',
     keywords: ['project', 'projects', 'worktree', 'worktrees', 'repo', 'repository', 'directory'],
-  },
-  {
-    slug: 'remote-instances',
-    title: 'Remote Instances',
-    group: 'projects',
-    kind: 'single',
-    keywords: ['ssh', 'remote', 'instances', 'tunnels', 'forwarding', 'connection'],
-    isAvailable: (ctx) => !ctx.isVSCode,
   },
   {
     slug: 'providers',
@@ -198,7 +188,6 @@ export const SETTINGS_PAGE_METADATA: readonly SettingsPageMeta[] = [
 
   { slug: 'notifications', title: 'Notifications', group: 'general', kind: 'single', keywords: ['alerts', 'native', 'summary', 'summarization'], },
   { slug: 'voice', title: 'Voice', group: 'general', kind: 'single', keywords: ['tts', 'speech', 'voice'], isAvailable: (ctx) => !ctx.isVSCode },
-  { slug: 'tunnel', title: 'External Tunnel', group: 'projects', kind: 'single', keywords: ['tunnel', 'external', 'cloudflare', 'qr', 'remote', 'mobile', 'share'], isAvailable: (ctx) => !ctx.isVSCode },
   { slug: 'about', title: 'About', group: 'general', kind: 'single', keywords: ['about', 'version', 'updates', 'release', 'changelog'], isAvailable: (ctx) => ctx.isMobile && !ctx.isVSCode },
 ] as const;
 

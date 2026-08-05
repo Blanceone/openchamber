@@ -1,6 +1,5 @@
 import React from 'react';
 
-import { isCapacitorApp } from '@/lib/platform';
 import { useSessionUIStore } from '@/sync/session-ui-store';
 
 import { buildDeepLink, parseDeepLink, type DeepLinkIntent, type SessionsFilter, type ViewTarget } from './deepLinks';
@@ -21,7 +20,7 @@ import { buildDeepLink, parseDeepLink, type DeepLinkIntent, type SessionsFilter,
 export interface DeepLinkHandlers {
   /** Open the sessions sheet, optionally pre-filtered (filter support is best-effort for now). */
   openSessions?: (filter?: SessionsFilter) => void;
-  /** Open a non-session surface (files / mcp / instances / update). */
+  /** Open a non-session surface (files / mcp / update). */
   openView?: (target: ViewTarget) => void;
   /** Open the Changes surface, optionally jumping straight to a file diff. */
   openChanges?: (options?: { path?: string; staged?: boolean }) => void;
@@ -143,53 +142,7 @@ export const useDeepLinkSource = (options: { ready: boolean }): void => {
   }, [isReady]);
 
   React.useEffect(() => {
-    if (!isCapacitorApp()) return;
-    let disposed = false;
-    const cleanup: Array<() => void> = [];
-
-    void import('@capacitor/app')
-      .then(async ({ App }) => {
-        if (disposed) return;
-        const handle = await App.addListener('appUrlOpen', (event) => {
-          applyDeepLinkUrl(event?.url);
-        });
-        if (disposed) {
-          void handle.remove();
-          return;
-        }
-        cleanup.push(() => void handle.remove());
-      })
-      .catch(() => undefined);
-
-    void import('@capacitor/push-notifications')
-      .then(async ({ PushNotifications }) => {
-        if (disposed) return;
-        const handle = await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-          const data = action?.notification?.data as Record<string, unknown> | undefined;
-          // Prefer an explicit deep link in the payload (richest); fall back to a bare
-          // sessionId for backwards compatibility with existing push senders.
-          const url = typeof data?.url === 'string' ? data.url : typeof data?.deeplink === 'string' ? data.deeplink : undefined;
-          if (url) {
-            applyDeepLinkUrl(url);
-            return;
-          }
-          const sessionId = typeof data?.sessionId === 'string' ? data.sessionId : undefined;
-          if (sessionId) {
-            applyDeepLinkIntent({ type: 'session', sessionId });
-          }
-        });
-        if (disposed) {
-          void handle.remove();
-          return;
-        }
-        cleanup.push(() => void handle.remove());
-      })
-      .catch(() => undefined);
-
-    return () => {
-      disposed = true;
-      cleanup.forEach((remove) => remove());
-    };
+    // Capacitor deep-link / push listeners removed with the mobile product.
   }, []);
 };
 

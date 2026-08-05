@@ -23,39 +23,23 @@ Run commands from the project root unless a section says otherwise.
 
 Both are configurable via env vars: `OPENCHAMBER_PORT`, `OPENCHAMBER_HMR_UI_PORT`, `OPENCHAMBER_HMR_API_PORT`.
 
-### Desktop (Electron)
+### Desktop (Electron, Windows)
 
 ```bash
 bun run electron:dev          # HMR web UI + Electron shell
 bun run electron:dev:bundled  # Electron shell using built web assets
-bun run electron:build        # Package desktop app for the current platform
+bun run electron:build        # Package Windows NSIS installer
 ```
 
-Desktop supports macOS, Windows, and Linux. The build output is written to `packages/electron/dist`.
-
-macOS builds create `dmg` and `zip` files. You need Xcode/build tools for notarized packaging and icon asset work.
+This monorepo ships **Windows Desktop only**. Build output is written to `packages/electron/dist`.
 
 Windows builds create an NSIS installer. If signing env vars are not set, the build script makes an unsigned installer.
 
-Linux builds produce an AppImage for the native x64 or arm64 host.
-
 For desktop-specific details, see [`packages/electron/README.md`](./packages/electron/README.md).
-
-### VS Code Extension
-
-```bash
-bun run vscode:dev      # Watch mode + Extension Development Host
-bun run vscode:build    # Build extension + webview
-bun run vscode:package  # Create a local .vsix package
-```
-
-`bun run vscode:dev` opens an Extension Development Host automatically. You can override the editor or workspace with `OPENCHAMBER_VSCODE_BIN` and `OPENCHAMBER_VSCODE_DEV_WORKSPACE`.
-
-Example: `OPENCHAMBER_VSCODE_BIN=cursor bun run vscode:dev`.
 
 ### Shared UI (`packages/ui`)
 
-No standalone app server. This is a source-level library used by Web, Desktop, and VS Code.
+No standalone app server. This is a source-level library used by the Electron desktop UI build in `packages/web`.
 
 Useful package commands:
 
@@ -73,40 +57,16 @@ bun run lint:ui
 | `bun run build:web` | Build only `packages/web` |
 | `bun run build:ui` | Build only `packages/ui` |
 | `bun run build:electron` | Run Electron package build script without full packaging |
-| `bun run electron:build` | Build packaged desktop app for the current OS |
-| `bun run vscode:build` | Build the VS Code extension |
-| `bun run vscode:package` | Package the VS Code extension as `.vsix` |
+| `bun run electron:build` | Build packaged Windows NSIS installer |
 | `bun run pack:web` | Create a package archive for `@openchamber/web` |
 
 ## Platform Build Notes
 
-You usually build desktop installers on the target platform.
-
-macOS:
-
-```bash
-bun run electron:build
-bun run release:test:intel
-bun run release:test:arm
-```
-
-Windows:
+Build Windows installers on a Windows host:
 
 ```bash
 bun run electron:build
 ```
-
-Linux x64 and arm64 AppImages are packaged natively on the matching host architecture. Use Bun for dependency installation and packaging orchestration:
-
-```bash
-OPENCHAMBER_TARGET_ARCH=x64 bun run electron:build
-# On an arm64 host:
-OPENCHAMBER_TARGET_ARCH=arm64 bun run electron:build
-
-bun run --cwd packages/electron verify:linux-appimage
-```
-
-The final AppImage verifier checks desktop identity and the architecture of Electron, the bundled OpenCode CLI, and packaged native modules.
 
 ## Before Submitting
 
@@ -114,12 +74,6 @@ The final AppImage verifier checks desktop identity and the architecture of Elec
 bun run type-check   # Must pass
 bun run lint         # Must pass
 bun run build        # Must succeed
-```
-
-For docs-only changes, validation may be enough:
-
-```bash
-bun run docs:validate
 ```
 
 ## Code Style
@@ -183,7 +137,7 @@ Choose evidence based on the affected behavior:
 
 - Include before and after states. If a meaningful before state cannot be
   captured, explain why.
-- Include narrow/mobile and desktop states when shared or responsive UI is
+- Include responsive desktop states when shared UI is
   affected.
 - Include light and dark states when colors, styling, surfaces, or visual
   states change.
@@ -236,9 +190,8 @@ conversation remains chronological. Previous review comments are not rewritten.
 ```
 packages/
   ui/        Shared React components, hooks, stores, and theme system
-  web/       Web server (Express) + frontend (Vite) + CLI
-  electron/  Electron desktop shell
-  vscode/    VS Code extension (extension host + webview)
+  web/       OpenChamber server (Express) + Vite UI assets + CLI
+  electron/  Windows Electron desktop shell
 ```
 
 See [AGENTS.md](./AGENTS.md) for detailed architecture reference.

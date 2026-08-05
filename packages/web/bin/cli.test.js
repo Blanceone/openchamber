@@ -731,7 +731,7 @@ describe('compatibility exports', () => {
     });
   });
 
-  it('includes ngrok in fallback tunnel providers when no server is reachable', async () => {
+  it('disables tunnel providers command in local-only desktop builds', async () => {
     await withTempOpenChamberDataDir(async () => {
       const port = await allocateLoopbackPort();
       const output = await captureStdout(async () => {
@@ -739,12 +739,12 @@ describe('compatibility exports', () => {
       });
 
       const body = JSON.parse(output);
-      expect(body.source).toBe('fallback');
-      expect(body.providers.map((entry) => entry.provider)).toContain('ngrok');
+      expect(body.status).toBe('error');
+      expect(String(body.error)).toMatch(/disabled/i);
     });
   });
 
-  it('supports ngrok quick dry-run with an explicit port', async () => {
+  it('disables tunnel start command in local-only desktop builds', async () => {
     await withTempOpenChamberDataDir(async () => {
       const output = await captureStdout(async () => {
         await commands.tunnel({
@@ -758,12 +758,8 @@ describe('compatibility exports', () => {
       });
 
       const body = JSON.parse(output);
-      expect(body).toEqual(expect.objectContaining({
-        ok: true,
-        dryRun: true,
-        provider: 'ngrok',
-        mode: 'quick',
-      }));
+      expect(body.status).toBe('error');
+      expect(String(body.error)).toMatch(/disabled/i);
     });
   });
 });

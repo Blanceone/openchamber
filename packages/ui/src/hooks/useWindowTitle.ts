@@ -1,9 +1,7 @@
 import React from 'react';
 import { useProjectsStore } from '@/stores/useProjectsStore';
-import { isDesktopLocalOriginActive, isDesktopShell } from '@/lib/desktop';
-import { desktopHostsGet, getDesktopHostApiUrl, locationMatchesHost, redactSensitiveUrl } from '@/lib/desktopHosts';
+import { isDesktopShell } from '@/lib/desktop';
 import { setDesktopWindowTitle } from '@/lib/desktopNative';
-import { getRuntimeApiBaseUrl } from '@/lib/runtime-switch';
 
 const APP_TITLE = 'OpenChamber';
 
@@ -17,8 +15,8 @@ const getProjectNameFromPath = (path: string): string => {
   return segments[segments.length - 1] ?? '';
 };
 
-const buildWindowTitle = (projectLabel: string | null, instanceLabel: string | null): string => {
-  const parts = [projectLabel, instanceLabel, APP_TITLE].filter((part): part is string => typeof part === 'string' && part.trim().length > 0);
+const buildWindowTitle = (projectLabel: string | null): string => {
+  const parts = [projectLabel, APP_TITLE].filter((part): part is string => typeof part === 'string' && part.trim().length > 0);
   return parts.join(' | ');
 };
 
@@ -48,62 +46,7 @@ export const useWindowTitle = () => {
     return null;
   }, [activeProject]);
 
-  const [instanceLabel, setInstanceLabel] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    if (typeof window === 'undefined' || !isDesktopShell()) {
-      setInstanceLabel(null);
-      return;
-    }
-
-    let cancelled = false;
-
-    const refreshInstanceLabel = async () => {
-      try {
-        if (isDesktopLocalOriginActive()) {
-          if (!cancelled) {
-            setInstanceLabel(null);
-          }
-          return;
-        }
-
-        const localOrigin = window.__OPENCHAMBER_LOCAL_ORIGIN__ || window.location.origin;
-        const runtimeApiBaseUrl = getRuntimeApiBaseUrl();
-
-        if (runtimeApiBaseUrl && locationMatchesHost(runtimeApiBaseUrl, localOrigin)) {
-          if (!cancelled) {
-            setInstanceLabel(null);
-          }
-          return;
-        }
-
-        const cfg = await desktopHostsGet();
-        const match = cfg.hosts.find((host) => runtimeApiBaseUrl ? locationMatchesHost(runtimeApiBaseUrl, getDesktopHostApiUrl(host)) : false);
-        const nextLabel = match?.label?.trim() ? redactSensitiveUrl(match.label.trim()) : 'Instance';
-        if (!cancelled) {
-          setInstanceLabel(nextLabel);
-        }
-      } catch {
-        if (!cancelled) {
-          setInstanceLabel('Instance');
-        }
-      }
-    };
-
-    void refreshInstanceLabel();
-
-    const handleFocus = () => {
-      void refreshInstanceLabel();
-    };
-
-    window.addEventListener('focus', handleFocus);
-    return () => {
-      cancelled = true;
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, []);
-
-  const title = React.useMemo(() => buildWindowTitle(projectLabel, instanceLabel), [projectLabel, instanceLabel]);
+  const title = React.useMemo(() => buildWindowTitle(projectLabel), [projectLabel]);
 
   React.useEffect(() => {
     if (typeof document !== 'undefined') {

@@ -7,22 +7,13 @@ import type { RecoveryVariant } from './DesktopConnectionRecovery';
 export type OnboardingScreenMode = 'first-launch' | 'local-setup' | 'recovery';
 
 type OnboardingScreenProps = {
-  /** Callback when user goes back from local-setup */
   onBack?: () => void;
-  /** Callback when CLI becomes available */
   onCliAvailable?: () => void;
-  /** Screen mode to render */
   mode?: OnboardingScreenMode;
-  /** Recovery variant (only used when mode is 'recovery') */
   recoveryVariant?: RecoveryVariant;
-  /** Host URL for recovery context */
   recoveryHostUrl?: string;
-  /** Host label for recovery context */
   recoveryHostLabel?: string;
-  /** Callback when user enters local setup from recovery */
   onEnterLocalSetup?: () => void;
-  /** Callback when user wants to switch to remote (first-launch only) */
-  onChooseRemote?: () => void;
   localAvailable?: boolean;
 };
 
@@ -36,34 +27,20 @@ export function OnboardingScreen({
   onEnterLocalSetup,
   localAvailable = true,
 }: OnboardingScreenProps) {
-  const [showRecoveryRemoteForm, setShowRecoveryRemoteForm] = React.useState(false);
   const [recoveryEnteredLocalSetup, setRecoveryEnteredLocalSetup] = React.useState(false);
 
-  // Reset transient recovery subflow state when the flow identity changes, so
-  // stale local-setup or remote-form views don't bleed across prop updates.
   React.useEffect(() => {
     setRecoveryEnteredLocalSetup(false);
-    setShowRecoveryRemoteForm(false);
   }, [mode, recoveryVariant, recoveryHostUrl, recoveryHostLabel]);
 
-  // Derive the effective mode: recovery → local-setup can fall through to the
-  // existing local-setup branch instead of getting stuck behind the early return.
   const effectiveMode = recoveryEnteredLocalSetup ? 'local-setup' : mode;
 
-  // Recovery mode
   if (effectiveMode === 'recovery') {
     return (
       <RecoveryScreen
         variant={recoveryVariant}
         hostUrl={recoveryHostUrl}
         hostLabel={recoveryHostLabel}
-        onChooseRemote={() => setShowRecoveryRemoteForm(true)}
-        showRemoteForm={showRecoveryRemoteForm}
-        onCloseRemoteForm={() => setShowRecoveryRemoteForm(false)}
-        onSwitchToLocalFromRemote={() => {
-          setShowRecoveryRemoteForm(false);
-          setRecoveryEnteredLocalSetup(true);
-        }}
         onEnterLocalSetup={() => {
           setRecoveryEnteredLocalSetup(true);
           onEnterLocalSetup?.();
@@ -73,7 +50,6 @@ export function OnboardingScreen({
     );
   }
 
-  // Local-setup mode
   if (effectiveMode === 'local-setup') {
     return (
       <LocalSetupScreen
@@ -86,12 +62,10 @@ export function OnboardingScreen({
         }}
         onCliAvailable={onCliAvailable}
         isFromRecovery={recoveryEnteredLocalSetup}
-        onSwitchToRemote={() => setShowRecoveryRemoteForm(true)}
       />
     );
   }
 
-  // First-launch mode (default)
   return (
     <ChooserScreen
       onCliAvailable={onCliAvailable}

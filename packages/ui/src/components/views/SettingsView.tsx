@@ -24,7 +24,6 @@ import { SkillsSidebar } from '@/components/sections/skills/SkillsSidebar';
 import { SkillsPage } from '@/components/sections/skills/SkillsPage';
 import { ProjectsSidebar } from '@/components/sections/projects/ProjectsSidebar';
 import { ProjectsPage } from '@/components/sections/projects/ProjectsPage';
-import { RemoteInstancesPage } from '@/components/sections/remote-instances/RemoteInstancesPage';
 import { ProvidersSidebar } from '@/components/sections/providers/ProvidersSidebar';
 import { ProvidersPage } from '@/components/sections/providers/ProvidersPage';
 import { UsageSidebar } from '@/components/sections/usage/UsageSidebar';
@@ -94,8 +93,6 @@ const pageOrder: SettingsPageSlug[] = [
   'about',
   // 'projects' group — Workspace
   'projects',
-  'remote-instances',
-  'tunnel',
   'git',
   // 'opencode' group — OpenCode
   'providers',
@@ -178,8 +175,6 @@ export function getSettingsNavIcon(slug: SettingsPageSlug): IconName | null {
       return 'settings-3';
     case 'projects':
       return 'folders';
-    case 'remote-instances':
-      return 'computer';
     case 'appearance':
       return 'palette';
     case 'chat':
@@ -220,8 +215,6 @@ export function getSettingsNavIcon(slug: SettingsPageSlug): IconName | null {
       return 'bar-chart-2';
     case 'voice':
       return 'mic';
-    case 'tunnel':
-      return 'home-office';
     case 'about':
       return 'information';
     case 'home':
@@ -367,7 +360,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
     sessions: 'sessions',
     notifications: 'notifications',
     voice: 'voice',
-    tunnel: 'tunnel',
   }), []);
 
   const getPageTitle = React.useCallback((slug: SettingsPageSlug): string => {
@@ -376,8 +368,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
         return t('settings.page.general.title');
       case 'projects':
         return t('settings.page.projects.title');
-      case 'remote-instances':
-        return t('settings.page.remoteInstances.title');
       case 'providers':
         return t('settings.page.providers.title');
       case 'usage':
@@ -414,8 +404,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
         return t('settings.page.notifications.title');
       case 'voice':
         return t('settings.page.voice.title');
-      case 'tunnel':
-        return t('settings.page.tunnel.title');
       case 'about':
         return t('settings.page.about.title');
       case 'home':
@@ -669,8 +657,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
     switch (slug) {
       case 'projects':
         return <ProjectsPage />;
-      case 'remote-instances':
-        return <RemoteInstancesPage />;
       case 'agents':
         return <AgentsPage />;
       case 'behavior':
@@ -707,8 +693,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
       case 'shortcuts':
       case 'sessions':
       case 'notifications':
-      case 'voice':
-      case 'tunnel': {
+      case 'voice': {
         const section = openChamberSectionBySlug[slug] ?? 'visual';
         return <OpenChamberPage section={section} />;
       }
@@ -954,11 +939,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
                               : <Icon name={iconName!} className="h-[18px] w-[18px] shrink-0 sm:h-4 sm:w-4" />}
                             <span className="flex items-center gap-1.5 whitespace-nowrap overflow-hidden transition-opacity duration-150 opacity-100">
                               <span className="typography-ui-label font-normal truncate">{getPageTitle(page.slug)}</span>
-                              {page.slug === 'tunnel' && (
-                                <span className="shrink-0 typography-micro px-1 rounded leading-none pb-px text-[var(--status-warning)] bg-[var(--status-warning)]/10">
-                                  {t('settings.view.badge.beta')}
-                                </span>
-                              )}
                             </span>
                           </button>
                         </TooltipTrigger>

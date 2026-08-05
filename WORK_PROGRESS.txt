@@ -1,0 +1,93 @@
+OpenChamber 本机桌面裁剪 — 工作进展与后续事项
+============================================
+日期：2026-08-05
+分支：dev
+远程：origin = https://github.com/Blanceone/openchamber.git
+上游：upstream = https://github.com/openchamber/openchamber.git
+
+一、产品目标（已确认）
+--------------------
+- 仅保留 Windows Electron 桌面产品面（packages/electron + web + ui）
+- 本机工作为主，需要本地 Git / GitHub（含 Git SSH 身份）
+- 不再提供 OpenChamber 远程主机、Private Relay、外网隧道、配对扫码连入、LAN 暴露等产品入口
+
+二、已完成工作
+--------------
+
+【阶段 A】Windows 桌面产品裁剪（相对上游多端产品）
+- 删除 packages/vscode、packages/mobile、packages/docs
+- CI / release 收敛为 Windows Electron（去掉 mac/linux/mobile/vscode 工作流）
+- Electron 打包目标仅 Windows NSIS
+- 增加 Windows 环境辅助：bunfig.toml（hoisted linker）、scripts/windows-electron-env.ps1、repair-windows-electron.ps1
+- 曾成功打出安装包（本机产物，未入库）：
+  packages/electron/dist/OpenChamber-1.18.1-win-x64.exe（约 158MB，未签名）
+
+【阶段 B】本机 + Git：裁剪 OpenChamber 远程能力（按计划）
+UI：
+- Settings 移除 remote-instances、tunnel；General 去掉 LAN / keep-awake / LAN UI 密码
+- 删除 RemoteInstancesPage、TunnelSettings、DesktopHostSwitcher、RemoteConnectionForm
+- 删除 desktopSsh / useDesktopSshStore / connectionPayload / desktopRelayRestore
+- desktopHosts 收成仅本机；项目动作去掉 desktopSshForward
+- Header 去掉主机切换与 remote-update；onboarding/recovery 仅本机
+- 深链去掉 instances / connect；保留 session 类深链意图
+- 保留 Settings → Git / GitHub（Git SSH 身份 ≠ OpenChamber SSH 主机）
+
+Electron：
+- ssh-manager 改为 no-op stub；desktop_ssh_* / 远程 host 探活与连入收窄或空实现
+- 去掉 openchamber://connect 与 host/<id> 深链；保留本机 token 与 session 深链
+- preload 去掉 relay host id 注入
+
+CLI / 文档：
+- openchamber tunnel / connect-url 在 cli.js 入口直接报错退出（本地桌面构建禁用）
+- 更新 README.md、AGENTS.md、packages/electron/README.md、packages/web/README.md
+
+验证（已跑）：
+- node --check：electron main / preload / ssh-manager
+- bun test：ssh-manager stub、desktopHosts、desktopRecoveryRouting、CLI 禁用相关用例
+- bun run dead-code（非阻塞报告）
+- 说明：packages/ui 全量 tsc 仍有原有 process/@types/node 问题，与本次删除无直接对应报错
+
+三、刻意未做（计划内留给后续）
+------------------------------
+1. 删除 packages/ui/src/lib/relay/** 与 packages/web 侧 tunnels/relay/pairing 实现
+   （当前：UI/Electron 不再调用；服务端模块仍挂在 startWebUiServer，降低启动回归风险）
+2. VS Code / Capacitor / APNs 等死代码大扫除
+3. 修改 Git 身份或 GitHub OAuth 流程（应保持不动）
+4. 清理各 locale 中残留的远程相关 i18n 孤儿键（不影响运行）
+5. 正式 electron:build 在无 VS C++ 工具链机器上仍可能跳过 native rebuild；
+   需安装 VS Build Tools 或接受 N-API 预编译；winCodeSign 符号链接权限问题可用
+   --config.win.signAndEditExecutable=false 规避（未签名安装包）
+
+四、建议后续工作事项
+--------------------
+优先级高：
+1. 本机冒烟：bun run electron:dev
+   - 设置无 Remote Instances / External Tunnel
+   - Header 无主机切换
+   - Settings → Git 可用；能开会话
+2. 在具备 VS Build Tools 的环境完整跑 electron:build，产出可分发安装包并做安装冒烟
+3. 跟进删除（或 feature-flag 404）web tunnels/relay/pairing 路由与 ui/lib/relay，减小攻击面与包体
+
+优先级中：
+4. 清理 VS Code / Capacitor / APNs / linux-mac 打包死代码与过时文档/技能
+5. 清理远程相关 i18n 孤儿键与 CLI 帮助文案中仍出现的 tunnel/connect-url 说明
+6. 评估 DesktopNetworkSettings 去掉本地 UI 密码后，是否仍需独立的本机锁屏密码设置
+
+优先级低：
+7. 将 Windows 打包注意点（镜像、hoisted、signAndEditExecutable）写入 CONTRIBUTING
+8. 安装包签名（CSC）若需要分发到外网用户
+
+五、当前仓库状态（提交前预期）
+------------------------------
+- 工作区包含：阶段 A + 阶段 B 全部源码/文档/CI 变更
+- 不提交：packages/electron/dist 安装包（已 gitignore）、node_modules、OpenCode CLI 缓存
+- 新增未跟踪拟纳入提交：bunfig.toml、mobileAppContext stub、windows-*.ps1 脚本、本进展文档
+
+六、冒烟清单（给接手同学）
+--------------------------
+[ ] electron:dev 能启动
+[ ] 设置导航无 Remote / Tunnel
+[ ] Git 页可打开；可配置身份
+[ ] 新建/打开会话正常
+[ ] 终端可用（若 native rebuild 跳过，观察 PTY 是否异常）
+[ ] CLI：openchamber tunnel / connect-url 应提示 disabled

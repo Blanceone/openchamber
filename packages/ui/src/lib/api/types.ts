@@ -1187,9 +1187,8 @@ export interface PairingSessionCreateResult {
   };
   server: {
     label: string;
-    // Transport candidates for the pairing-v2 payload. Shape matches
-    // PairingEndpointCandidate in `@/lib/connectionPayload` (direct lan/tunnel or
-    // relay); left as a structural type here so this contract file stays leaf.
+    // Transport candidates for pairing payloads (legacy server contract).
+    // Left as a structural type so this contract file stays leaf.
     candidates: Array<Record<string, unknown>>;
   };
 }

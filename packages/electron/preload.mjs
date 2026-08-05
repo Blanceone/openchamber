@@ -27,14 +27,11 @@ const trayEnabled = process.platform !== 'darwin' || readArgValue('--openchamber
 // Preload re-executes on every cross-origin navigation (we run with
 // sandbox:false, per-document). Two separate concerns to balance:
 //  - __OPENCHAMBER_ELECTRON__ is a shell-identity flag (no capability).
-//    Remote UIs still need it so isDesktopShell() returns true and the
-//    window renders with desktop affordances (DesktopHostSwitcher,
-//    title bar offsets, etc.). Expose unconditionally.
-//  - __OPENCHAMBER_DESKTOP__ is the IPC channel to the main process. It is
-//    exposed broadly, but privileged commands are gated in main.mjs.
-//    Local-only globals below stay limited to packaged UI / exact localOrigin.
-// Everything driven by localOrigin (home dir, macOS hints) also stays
-// local-only since it leaks info about the Electron host machine.
+//    Expose unconditionally so isDesktopShell() returns true and desktop
+//    chrome (title bar offsets, etc.) renders correctly.
+//  - __OPENCHAMBER_DESKTOP__ is the IPC channel to the main process.
+//    Privileged commands are gated in main.mjs.
+// Local-only globals below stay limited to packaged UI / exact localOrigin.
 const currentOrigin = (() => {
   try {
     return typeof location !== 'undefined' ? location.origin : '';
@@ -46,11 +43,6 @@ const isLocalPage = currentOrigin !== 'null'
   && (currentOrigin === 'openchamber-ui://app'
   || (localOrigin && currentOrigin === localOrigin));
 
-// Remote pages need __OPENCHAMBER_LOCAL_ORIGIN__ so the HostSwitcher knows
-// the URL of the Local entry (isDesktopLocalOriginActive() falls back to
-// window.location.origin otherwise — wrong on remote). Low risk: the value
-// is just "http://127.0.0.1:<port>" which is not exploitable without the
-// IPC channel, and CORS on the local server prevents remote-origin fetches.
 if (localOrigin) {
   contextBridge.exposeInMainWorld('__OPENCHAMBER_LOCAL_ORIGIN__', localOrigin);
 }
@@ -63,14 +55,6 @@ if (clientToken && isLocalPage) {
   contextBridge.exposeInMainWorld('__OPENCHAMBER_CLIENT_TOKEN__', clientToken);
 }
 
-// Which saved host this window should connect to over the relay-capable path
-// (direct probe first, E2EE tunnel fallback). Local pages only — the id is
-// only useful together with the desktop IPC channel anyway.
-const relayHostId = readArgValue('--openchamber-relay-host-id');
-if (relayHostId && isLocalPage) {
-  contextBridge.exposeInMainWorld('__OPENCHAMBER_RELAY_HOST_ID__', relayHostId);
-}
-
 if (runtimeHeadersRaw && isLocalPage) {
   try {
     const runtimeHeaders = JSON.parse(runtimeHeadersRaw);
@@ -81,9 +65,7 @@ if (runtimeHeadersRaw && isLocalPage) {
   }
 }
 
-// Home directory leaks the OS username — keep local-only. Remote pages
-// operate on the REMOTE server's filesystem, local home is irrelevant
-// (and would be misleading if consumed as a workspace hint).
+// Home directory leaks the OS username — keep local-only.
 if (isLocalPage && homeDirectory) {
   contextBridge.exposeInMainWorld('__OPENCHAMBER_HOME__', homeDirectory);
 }
@@ -105,9 +87,9 @@ contextBridge.exposeInMainWorld('__OPENCHAMBER_ELECTRON__', {
 contextBridge.exposeInMainWorld('__OPENCHAMBER_PLATFORM__', process.platform);
 
 // Note: bootOutcome must stay writable from the main world's initScript so
-// re-navigations (host switch via deep link) can refresh it. contextBridge-
-// exposed globals are read-only, which blocks that update — rely solely on
-// the main-process initScript injection (dispatched on did-finish-load).
+// re-navigations can refresh it. contextBridge-exposed globals are read-only,
+// which blocks that update — rely solely on the main-process initScript
+// injection (dispatched on did-finish-load).
 
 const addListener = (event, handler) => {
   const listeners = eventListeners.get(event) || new Set();
@@ -182,8 +164,7 @@ ipcRenderer.on('openchamber:emit', (_evt, payload) => {
 
 // The desktop bridge is exposed on all pages; the main-process gate in
 // ipcMain.handle('openchamber:invoke') decides per-command what is safe
-// for non-local callers (window/host-switcher ops yes, file/shell ops
-// no). See COMMANDS_SAFE_FOR_REMOTE in main.mjs.
+// for non-local callers (window ops yes, file/shell ops no).
 contextBridge.exposeInMainWorld('__OPENCHAMBER_DESKTOP__', {
   invoke: (cmd, args) => ipcRenderer.invoke('openchamber:invoke', cmd, args || {}),
   openDialog: (options) => ipcRenderer.invoke('openchamber:dialog:open', options || {}),

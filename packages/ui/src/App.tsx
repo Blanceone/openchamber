@@ -839,9 +839,6 @@ function App({ apis }: AppProps) {
                 mode="first-launch"
                 localAvailable={bootView.localAvailable !== false}
                 onCliAvailable={handleDesktopBootDismiss}
-                onChooseRemote={() => {
-                  // Switch to remote tab - handled internally by OnboardingScreen
-                }}
               />
             </React.Suspense>
           </div>

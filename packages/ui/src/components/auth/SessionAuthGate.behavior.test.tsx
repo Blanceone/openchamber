@@ -229,10 +229,6 @@ mock.module('@/components/icon/Icon', () => ({
   Icon: () => null,
 }));
 
-mock.module('@/components/desktop/DesktopHostSwitcher', () => ({
-  DesktopHostSwitcherInline: () => 'host-switcher',
-}));
-
 mock.module('@/lib/i18n', () => ({
   useI18n: () => ({ t: (key: string) => key }),
 }));

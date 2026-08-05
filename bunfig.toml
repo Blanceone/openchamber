@@ -1,0 +1,5 @@
+# Windows MAX_PATH: isolated linker nests packages under
+# node_modules/.bun/<very-long-name>/node_modules/... and exceeds 260 chars
+# for some @babel plugin package names. Hoisted layout keeps paths short.
+[install]
+linker = "hoisted"

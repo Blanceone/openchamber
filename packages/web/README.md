@@ -4,7 +4,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/openchamber/openchamber?style=flat&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgZmlsbD0iI2YxZWNlYyIgdmlld0JveD0iMCAwIDI1NiAyNTYiPjxwYXRoIGQ9Ik0xMjgsMTI5LjA5VjIzMmE4LDgsMCwwLDEtMy44NC0xbC04OC00OC4xOGE4LDgsMCwwLDEtNC4xNi03VjgwLjE4YTgsOCwwLDAsMSwuNy0zLjI1WiIgb3BhY2l0eT0iMC4yIj48L3BhdGg%2BPHBhdGggZD0iTTIyMy42OCw2Ni4xNSwxMzUuNjgsMThhMTUuODgsMTUuODgsMCwwLDAtMTUuMzYsMGwtODgsNDguMTdhMTYsMTYsMCwwLDAtOC4zMiwxNHY5NS42NGExNiwxNiwwLDAsMCw4LjMyLDE0bDg4LDQ4LjE3YTE1Ljg4LDE1Ljg4LDAsMCwwLDE1LjM2LDBsODgtNDguMTdhMTYsMTYsMCwwLDAsOC4zMi0xNFY4MC4xOEExNiwxNiwwLDAsMCwyMjMuNjgsNjYuMTVaTTEyOCwzMmw4MC4zNCw0NC0yOS43NywxNi4zLTgwLjM1LTQ0Wk0xMjgsMTIwLDQ3LjY2LDc2bDMzLjktMTguNTYsODAuMzQsNDRaTTQwLDkwbDgwLDQzLjc4djg1Ljc5TDQwLDE3NS44MlptMTc2LDg1Ljc4aDBsLTgwLDQzLjc5VjEzMy44MmwzMi0xNy41MVYxNTJhOCw4LDAsMCwwLDE2LDBWMTA3LjU1TDIxNiw5MHY4NS43N1oiPjwvcGF0aD48L3N2Zz4%3D&logoColor=FFFCF0&labelColor=100F0F&color=205EA6)](https://github.com/openchamber/openchamber/releases/latest)
 [![Discord](https://img.shields.io/badge/Discord-join.svg?style=flat&labelColor=100F0F&color=8B7EC8&logo=discord&logoColor=FFFCF0)](https://discord.gg/ZYRSdnwwKA)
 
-Run [OpenCode](https://opencode.ai) in your browser. Install the CLI, open `localhost:3000`, done. Works on desktop browsers, tablets, and phones as a PWA.
+Run the OpenChamber server and Vite UI assets used by the Windows Electron desktop app. Local `openchamber serve` remains available for debugging.
 
 Full project overview, screenshots, and all features: [github.com/openchamber/openchamber](https://github.com/openchamber/openchamber)
 
@@ -29,17 +29,6 @@ openchamber startup enable           # Start at login as a native service
 OPENCHAMBER_UI_PASSWORD=secret openchamber startup enable # Save service password env
 openchamber startup status           # Show startup service status
 openchamber startup disable          # Remove startup service
-openchamber tunnel help              # Tunnel lifecycle commands
-openchamber tunnel providers         # Show provider capabilities
-openchamber tunnel profile add --provider cloudflare --mode managed-remote --name prod-main --hostname app.example.com --token <token>
-openchamber tunnel start --profile prod-main
-openchamber tunnel start --provider cloudflare --mode quick --qr
-openchamber tunnel start --provider cloudflare --mode managed-local --config ~/.cloudflared/config.yml
-openchamber tunnel status --all      # Show tunnel state across instances
-openchamber tunnel stop --port 3000  # Stop tunnel only (server stays running)
-openchamber connect-url --port 3000  # Add this server to OpenChamber Desktop
-openchamber connect-url --server http://host:3000 --qr
-openchamber connect-url --port 3000 --qr
 openchamber logs                     # Follow latest instance logs
 OPENCODE_PORT=4096 OPENCODE_SKIP_START=true openchamber                    # Connect to external OpenCode server
 OPENCODE_HOST=https://myhost:4096 OPENCODE_SKIP_START=true openchamber  # Connect via custom host/HTTPS
@@ -47,7 +36,9 @@ openchamber stop                     # Stop server
 openchamber update                   # Update to latest version
 ```
 
-`startup enable` snapshots your current environment into the native service so startup behaves like you launched `openchamber` from the same shell. This preserves provider tokens, PATH, SSH agent settings, and other CLI auth/config env vars. Use `--no-env-snapshot` for a minimal service env.
+`openchamber tunnel` and `openchamber connect-url` are disabled in this local-only desktop product build (commands exit with an error). Server-side tunnel/relay modules may still exist unused for startup compatibility.
+
+`startup enable` snapshots your current environment into the native service so startup behaves like you launched `openchamber` from the same shell. This preserves provider tokens, PATH, SSH agent settings (for Git remotes), and other CLI auth/config env vars. Use `--no-env-snapshot` for a minimal service env.
 
 When OpenChamber launches the local OpenCode server, it also registers a native
 `openchamber` agent tool for project, session, and scheduled-task orchestration.
@@ -56,46 +47,22 @@ Behavior settings can optionally inject a managed system-prompt optimizer on
 the next OpenCode restart. It is disabled by default and is not available for
 external OpenCode servers.
 
-### Tunnel behavior notes
+### Local desktop product note
 
-- One active tunnel per running OpenChamber instance (port).
-- Starting a different tunnel mode/provider on the same instance replaces the active tunnel.
-- Replacing or stopping a tunnel revokes existing connect links and invalidates remote tunnel sessions.
-- Connect links are one-time tokens; generating a new link revokes the previous unused link.
+This monorepo ships a **local Windows desktop** product. OpenChamber remote-host pairing, Private Relay, and external tunnels are not exposed in the Desktop UI. Prefer `bun run electron:dev` / the Windows installer for day-to-day use. Keep Git remotes (HTTPS or Git SSH) configured under Desktop **Settings → Git**.
 
-### Connect other OpenChamber apps
+<details>
+  <summary>Advanced: headless serve / LAN bind (debugging)</summary>
 
-Use `connect-url` when a web/API server should be added to OpenChamber Desktop or another OpenChamber app. If no server is running on the selected port, OpenChamber starts one first.
-
-```bash
-openchamber connect-url --port 3000
-openchamber connect-url --port 3000 --qr
-openchamber connect-url --port 3000 --json
-openchamber connect-url --port 3000 --name "Workstation"
-openchamber connect-url --port 3000 --lan --server http://workstation.local:3000 --qr
-```
-
-### Headless/API-only server for Desktop
-
-Use this on a remote machine when you want OpenChamber running as a web/API server, then connect to it from OpenChamber Desktop on another machine:
-
-```bash
-openchamber connect-url --port 3000 --api-only --lan --server http://workstation.local:3000 --qr --ui-password your-password
-```
-
-`--api-only` starts API routes without serving browser UI assets. `--lan` binds the server so other machines can reach it. `--server` is the address saved into the Desktop connection link. `--ui-password` protects browser access if UI routes are enabled elsewhere; the generated client token is what Desktop uses for API access.
-
-This creates a remote client token and prints an `openchamber://connect?...` link. The link contains the server URL, token, label, and payload version. In OpenChamber Desktop, paste it in **Settings -> Remote Instances -> Direct Instances -> Import Link** to add that server as an Instance.
-
-If the server was started with `--lan` or `--host 0.0.0.0`, `connect-url` automatically advertises a detected LAN IP instead of `127.0.0.1`. Use `--server <url>` when you want to advertise a specific DNS name, Tailscale address, reverse proxy URL, or HTTPS endpoint.
-
-If you are exposing the server beyond localhost, start it with a password:
+If you expose the server beyond localhost for local debugging, start it with a password:
 
 ```bash
 openchamber serve --lan --port 3000 --ui-password your-password
 ```
 
-Generating a client token does not automatically password-protect the hosted browser UI. `--ui-password` protects browser access; the client token lets another OpenChamber app connect to this server.
+`--lan` / `--host 0.0.0.0` bind beyond loopback. Desktop itself no longer imports remote instances via connect links.
+
+</details>
 
 <details>
 <summary>Connect to external OpenCode server</summary>
@@ -230,18 +197,11 @@ systemctl --user enable --now opencode openchamber
 
 </details>
 
-## What makes the web version special
+## What makes the web package special
 
-- **Remote access** - Cloudflare tunnel with QR onboarding. Scan from your phone, start coding.
-- **Mobile-first PWA** - optimized chat controls, keyboard-safe layouts, drag-to-reorder projects
-- **Background notifications** - know when your agent finishes, even from another tab
-- **Self-update** - update and restart from the UI, server settings stay intact
-- **Cross-tab tracking** - session activity stays in sync across browser tabs
-
-- Cloudflare tunnel access with quick, managed-remote, and managed-local modes
-- One-scan onboarding with tunnel QR + password URL helpers
-- Mobile-first experience: optimized chat controls, keyboard-safe layouts, and attachment-friendly UI
-- Background notifications plus reliable cross-tab session activity tracking
+- In-process server and Vite UI assets for the Windows Electron desktop
+- Git / GitHub workflows used by the desktop workspace
+- Background notifications and cross-tab session activity tracking (when using `serve` for debugging)
 - Built-in self-update + restart flow that keeps your server settings intact
 
 ## License

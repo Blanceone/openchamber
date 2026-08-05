@@ -243,12 +243,6 @@ const TerminalViewport = React.forwardRef<TerminalController, Props>(({
       const active = document.activeElement;
       if (active instanceof HTMLElement && container.contains(active)) {
         active.blur();
-        const capacitor = (window as typeof window & { Capacitor?: { getPlatform?: () => string } }).Capacitor;
-        if (capacitor?.getPlatform?.() === 'android') {
-          void import('@capacitor/keyboard')
-            .then(({ Keyboard }) => Keyboard.hide())
-            .catch(() => undefined);
-        }
       }
       observer?.disconnect();
       if (resizeTimeout) clearTimeout(resizeTimeout);
@@ -357,15 +351,8 @@ const TerminalViewport = React.forwardRef<TerminalController, Props>(({
     let remainder = 0;
     let selectionFocus: TerminalCellPosition | null = null;
     const lineHeight = Math.max(12, fontSize + 2);
-    // Android WebView only raises the soft keyboard for a native tap-focus; the
-    // pointer-captured, touch-action:none tap here focuses programmatically, so
-    // the IME must be summoned explicitly via the Capacitor Keyboard plugin.
     const showAndroidSoftKeyboard = () => {
-      const capacitor = (window as typeof window & { Capacitor?: { getPlatform?: () => string } }).Capacitor;
-      if (capacitor?.getPlatform?.() !== 'android') return;
-      void import('@capacitor/keyboard')
-        .then(({ Keyboard }) => Keyboard.show())
-        .catch(() => undefined);
+      // Capacitor Android soft-keyboard bridge removed with the mobile product.
     };
     const clearLongPress = () => {
       if (!longPressTimeout) return;

@@ -82,17 +82,6 @@ if (!winX64 || !winArm64) {
 output['latest.yml'] = serialize(winX64);
 output['latest-arm64.yml'] = serialize(winArm64);
 
-const macX64 = await read('latest-yml-x86_64-apple-darwin', 'latest-mac.yml');
-const macArm64 = await read('latest-yml-aarch64-apple-darwin', 'latest-mac.yml');
-if (macX64 || macArm64) {
-  const base = macArm64 || macX64;
-  output['latest-mac.yml'] = serialize({
-    version: base.version,
-    files: [...(macArm64?.files || []), ...(macX64?.files || [])],
-    releaseDate: base.releaseDate,
-  });
-}
-
 const tag = `v${version}`;
 const tmp = process.env.RUNNER_TEMP || '/tmp';
 for (const [filename, content] of Object.entries(output)) {

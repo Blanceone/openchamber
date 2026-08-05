@@ -1,8 +1,6 @@
 import React from 'react';
 import type { Session } from '@opencode-ai/sdk/v2';
-import { canUseElectronDesktopIPC, invokeDesktop, isDesktopLocalOriginActive } from '@/lib/desktop';
-import { getRuntimeApiBaseUrl } from '@/lib/runtime-switch';
-import { desktopHostsGet, getDesktopHostApiUrl, locationMatchesHost, redactSensitiveUrl } from '@/lib/desktopHosts';
+import { canUseElectronDesktopIPC, invokeDesktop } from '@/lib/desktop';
 import { getSyncChildStores, getAllSyncSessions } from '@/sync/sync-refs';
 import { opencodeClient } from '@/lib/opencode/client';
 import { useGlobalSessionStatusStore, applyGlobalSessionStatusSnapshot } from '@/sync/global-session-status';
@@ -203,25 +201,7 @@ const buildUsage = (): TrayUsage => {
   return { mode, groups };
 };
 
-// Mirrors the header's instance resolution (Header.refreshCurrentInstanceLabel):
-// the local origin shows as "Local OpenChamber"; a remote host shows its
-// configured name. Async because the host config is read over IPC.
-const resolveInstanceName = async (): Promise<string> => {
-  try {
-    if (isDesktopLocalOriginActive()) return 'Local OpenChamber';
-    const localOrigin = (window as unknown as { __OPENCHAMBER_LOCAL_ORIGIN__?: string }).__OPENCHAMBER_LOCAL_ORIGIN__
-      || window.location.origin;
-    const runtimeApiBaseUrl = getRuntimeApiBaseUrl();
-    if (runtimeApiBaseUrl && locationMatchesHost(runtimeApiBaseUrl, localOrigin)) return 'Local OpenChamber';
-    const cfg = await desktopHostsGet();
-    const match = cfg.hosts.find((host) =>
-      runtimeApiBaseUrl ? locationMatchesHost(runtimeApiBaseUrl, getDesktopHostApiUrl(host)) : false);
-    if (match?.label?.trim()) return redactSensitiveUrl(match.label.trim());
-    return 'Instance';
-  } catch {
-    return '';
-  }
-};
+const resolveInstanceName = async (): Promise<string> => 'Local OpenChamber';
 
 // Live data lives in the directory-scoped sync child stores. Aggregate it once
 // into flat lookups so we can attach it to the global session list by id.
