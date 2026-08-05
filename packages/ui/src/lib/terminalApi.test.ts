@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { RelayTunnelWebSocket } from './relay/tunnel-client';
+import type { RelayTunnelWebSocket } from './runtime-transport/browser-websocket';
 import { TerminalTransport } from './terminalApi';
 
 const encoder = new TextEncoder();

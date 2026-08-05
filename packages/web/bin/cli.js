@@ -12,14 +12,6 @@ import {
   assertAuthenticatedNetworkExposure,
 } from './lib/cli-network.js';
 import {
-  maskToken,
-  resolveToken,
-  redactProfileForOutput,
-  redactProfilesForOutput,
-  warnIfUnsafeFilePermissions,
-  ensureTunnelProfilesMigrated as ensureTunnelProfilesMigratedBase,
-} from './lib/cli-tunnel-profiles.js';
-import {
   parseArgs,
   showHelp,
   showControlHelp,
@@ -39,7 +31,6 @@ import { projectsCommand } from './lib/commands-projects.js';
 import { createUpdateCommand } from './lib/commands-update.js';
 import { createLifecycleCommands } from './lib/commands-lifecycle.js';
 import { createServeCommand } from './lib/commands-serve.js';
-import { isValidTunnelDoctorResponse, shouldDisplayTunnelQr } from './lib/commands-tunnel.js';
 import {
   resolveDoctorPortStatuses,
   discoverRunningInstances,
@@ -68,6 +59,17 @@ import {
   logStatus,
 } from './cli-output.js';
 
+// Tunnel profile / QR helpers kept as lightweight stubs so compatibility
+// exports and tests stay stable without loading tunnel command implementations.
+const ensureTunnelProfilesMigrated = () => ({ version: 1, profiles: [] });
+const shouldDisplayTunnelQr = () => false;
+const isValidTunnelDoctorResponse = () => false;
+const maskToken = (token) => (typeof token === 'string' && token.length > 8 ? `${token.slice(0, 4)}…${token.slice(-4)}` : '***');
+const resolveToken = () => '';
+const redactProfileForOutput = (profile) => profile;
+const redactProfilesForOutput = (profiles) => profiles;
+const warnIfUnsafeFilePermissions = () => {};
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -80,15 +82,6 @@ let foregroundShutdown = null;
 
 function setCancelCleanup(handler) {
   onCancelCleanup = typeof handler === 'function' ? handler : null;
-}
-
-function shouldWarnForTunnelProfileFile() {
-  if (!activeCommandOptions) return false;
-  return !isJsonMode(activeCommandOptions) && !isQuietMode(activeCommandOptions);
-}
-
-function ensureTunnelProfilesMigrated() {
-  return ensureTunnelProfilesMigratedBase({ shouldWarn: shouldWarnForTunnelProfileFile() });
 }
 
 const HAS_PLAIN_FLAG = process.argv.includes('--plain');

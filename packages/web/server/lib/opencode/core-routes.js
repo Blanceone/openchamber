@@ -384,6 +384,8 @@ export const registerAuthAndAccessRoutes = (app, dependencies) => {
     clientPairingRuntime,
     readSettingsFromDiskMigrated,
     normalizeTunnelSessionTtlMs,
+    // Local-desktop builds pass false so pairing / remote-client /connect stay closed.
+    remoteAccessEnabled = true,
     // Returns the relay pairing candidate ({ type:'relay', relayUrl, serverId,
     // hostEncPubJwk, priority }) when the host relay is enabled, else null.
     // Injected lazily because the relay service is constructed after these routes.
@@ -403,6 +405,7 @@ export const registerAuthAndAccessRoutes = (app, dependencies) => {
     // Display name a paired device shows for THIS server (issuing machine's
     // hostname), distinct from the per-device pairing label typed by the operator.
     getServerLabel = () => 'OpenChamber',
+    respondRemoteDisabled = null,
   } = dependencies;
   const PAIRING_REDEEM_RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000;
   const PAIRING_REDEEM_RATE_LIMIT_MAX_ATTEMPTS = 10;
@@ -736,6 +739,22 @@ export const registerAuthAndAccessRoutes = (app, dependencies) => {
     }
   });
 
+  const denyRemoteAccess = (_req, res) => {
+    if (typeof respondRemoteDisabled === 'function') {
+      return respondRemoteDisabled(res);
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(410).json({
+      error: 'Remote access, tunnels, relay, and pairing are disabled in this local-only desktop build.',
+      code: 'LOCAL_DESKTOP_REMOTE_DISABLED',
+    });
+  };
+
+  if (!remoteAccessEnabled) {
+    app.use('/api/client-auth', denyRemoteAccess);
+    app.get('/connect', denyRemoteAccess);
+  } else {
+
   app.get('/api/client-auth/clients', async (req, res, next) => {
     await runWithClientManagementAuth(req, res, next, async (authContext) => {
       if (authContext.type === 'client') {
@@ -969,6 +988,8 @@ export const registerAuthAndAccessRoutes = (app, dependencies) => {
       return res.status(500).type('text/plain').send('Failed to process connect request.');
     }
   });
+
+  } // remoteAccessEnabled
 
   app.post('/api/system/probe-url', express.json({ limit: '16kb' }), async (req, res, next) => {
     try {

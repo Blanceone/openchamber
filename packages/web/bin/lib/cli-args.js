@@ -506,13 +506,13 @@ function parseArgs(argv = process.argv.slice(2)) {
         // may still pass this when starting a remote server.
         break;
       case 'try-cf-tunnel':
-        removedFlagErrors.push('`--try-cf-tunnel` was removed. Use: openchamber tunnel start --provider cloudflare --mode quick');
+        removedFlagErrors.push('`--try-cf-tunnel` was removed. Tunnel commands are disabled in this local-only desktop build.');
         break;
       case 'tunnel-qr':
-        removedFlagErrors.push('`--tunnel-qr` was removed. Use: openchamber tunnel start ... --qr');
+        removedFlagErrors.push('`--tunnel-qr` was removed. Tunnel commands are disabled in this local-only desktop build.');
         break;
       case 'tunnel-password-url':
-        removedFlagErrors.push('`--tunnel-password-url` was removed. Use UI password auth directly after tunnel start.');
+        removedFlagErrors.push('`--tunnel-password-url` was removed. Use UI password auth directly.');
         break;
       case 'tunnel-provider':
       case 'tunnel-mode':
@@ -520,7 +520,7 @@ function parseArgs(argv = process.argv.slice(2)) {
       case 'tunnel-token':
       case 'tunnel-hostname':
       case 'tunnel':
-        removedFlagErrors.push(`\`--${name}\` was removed from top-level serve flow. Use: openchamber tunnel start ...`);
+        removedFlagErrors.push(`\`--${name}\` was removed. Tunnel commands are disabled in this local-only desktop build.`);
         break;
       default:
         if (!long && name.length === 1) {
@@ -565,7 +565,7 @@ function parseArgs(argv = process.argv.slice(2)) {
 
 function showHelp() {
   console.log(`
- OpenChamber - Web interface for the OpenCode AI coding agent
+ OpenChamber - Local Windows desktop UI for the OpenCode AI coding agent
 
 USAGE:
   openchamber [COMMAND] [OPTIONS]
@@ -580,19 +580,14 @@ COMMANDS:
   models         Show default and favorite models
   projects       Show configured projects and IDs
   control        Show OpenChamber control-plane commands
-  tunnel         Tunnel lifecycle commands
   startup        Manage launch at system startup
   logs           Tail OpenChamber logs
-  connect-url    Generate URL/QR for connecting another client
   update         Check for and install updates
 
 OPTIONS:
   -p, --port              Web server port (default: ${DEFAULT_PORT})
-  --host                  Bind address (default: 127.0.0.1)
-  --hostname              Alias for --host outside tunnel commands
-  --lan                   Bind to 0.0.0.0 for LAN access
-  --server <url>          Public/server URL for connect-url links
-  --relay                 connect-url: also include the end-to-end-encrypted relay transport
+  --host                  Bind address (default: 127.0.0.1; local-desktop builds stay on loopback)
+  --hostname              Alias for --host
   --ui-password           Protect browser UI with single password
   --api-only              Start API routes only, without serving browser UI assets
   --foreground            Run server in foreground (use with systemd/process managers)
@@ -601,7 +596,7 @@ OPTIONS:
   -v, --version           Show version
 
 ENVIRONMENT:
-  OPENCHAMBER_HOST             Bind address (e.g. 0.0.0.0 for all interfaces)
+  OPENCHAMBER_HOST             Bind address (local-desktop builds ignore non-loopback exposure)
   OPENCHAMBER_UI_PASSWORD      Alternative to --ui-password flag
   OPENCHAMBER_API_ONLY         Set to true/1 to start API routes only
   OPENCHAMBER_DATA_DIR         Override OpenChamber data directory
@@ -613,14 +608,13 @@ ENVIRONMENT:
 EXAMPLES:
   openchamber                    # Start in daemon mode on default port 3000 (or free port)
   openchamber --port 8080        # Start on port 8080 (daemon)
-  openchamber --lan --port 3002  # Start on LAN at 0.0.0.0:3002
-  openchamber serve --foreground # Start in foreground (for systemd Type=simple)
-  openchamber connect-url --port 3000 --qr
-  openchamber connect-url --server https://openchamber.example.com
+  openchamber serve --foreground # Start in foreground
   openchamber control           # Show control-plane commands for agents/scripts
   openchamber startup enable     # Start OpenChamber at user login
-  openchamber tunnel help        # Show tunnel lifecycle help
   openchamber logs               # Follow logs for latest running instance
+
+NOTE:
+  tunnel and connect-url commands are disabled in this local-only desktop build.
 `);
 }
 
@@ -637,7 +631,6 @@ COMMANDS:
   models                         Show default and favorite models
   projects                       Show configured projects and IDs
   schedule                       Manage scheduled tasks
-  tunnel                         Inspect tunnel status/readiness
   logs                           Tail logs for CLI-managed runtimes
 
 DETAILED HELP:
@@ -645,7 +638,6 @@ DETAILED HELP:
   openchamber models --help      Show model defaults and favorites help
   openchamber projects --help    Show project list help
   openchamber schedule --help    Show scheduled task actions and schedule options
-  openchamber tunnel help        Show tunnel lifecycle/status commands
   openchamber status --help      Show runtime status options
 
 COMMON OPTIONS:
@@ -696,38 +688,8 @@ function showConnectUrlHelp() {
   console.log(`
  OpenChamber Connect URL
 
-USAGE:
-  openchamber connect-url [OPTIONS]
-
-DESCRIPTION:
-  Generate an openchamber:// connection link for adding this server to another
-  OpenChamber app. If no server is running on the selected port, it starts one.
-
-OPTIONS:
-  -p, --port <port>       Server port to use or start (default: ${DEFAULT_PORT})
-  --host <address>        Bind address when starting the server
-  --hostname <address>    Alias for --host
-  --lan                   Bind to 0.0.0.0 for LAN access when starting
-  --server <url>          Public URL saved into the connection link
-  --server-url <url>      Alias for --server
-  --relay                 Also include the end-to-end-encrypted relay transport
-                          so the link works away from the local network. The
-                          device prefers the direct connection when reachable;
-                          the instance brings the relay up on its own. Set
-                          OPENCHAMBER_RELAY_URL to use a self-hosted relay.
-  --name <label>          Label saved with the remote client token
-  --ui-password <value>   Protect browser access when UI routes are enabled
-  --api-only              Start in headless/API-only mode when starting
-  --qr                    Print a QR code for the connection link
-  --json                  Output machine-readable JSON
-  -q, --quiet             Print only the connection link
-  -h, --help              Show this help
-
-EXAMPLES:
-  openchamber connect-url --port 3000 --qr
-  openchamber connect-url --port 3000 --api-only --lan --server http://workstation.local:3000 --qr
-  openchamber connect-url --server https://openchamber.example.com --name Workstation
-  openchamber connect-url --relay --name "My laptop"
+connect-url is disabled in this local-only desktop build.
+Remote pairing and connect links are not available.
 `);
 }
 
@@ -735,80 +697,8 @@ function showTunnelHelp() {
   console.log(`
  Tunnel Lifecycle Commands
 
-USAGE:
-  openchamber tunnel <SUBCOMMAND> [OPTIONS]
-
-SUBCOMMANDS:
-  help        Show this tunnel help
-  providers   Show available tunnel providers and capabilities
-  ready       Check tunnel readiness for a provider
-  doctor      Run deep tunnel diagnostics
-  status      Show tunnel status
-  start       Start a tunnel
-  stop        Stop active tunnel (keep server running)
-  profile     Manage saved managed-remote profiles
-
-COMMON OPTIONS:
-  -p, --port              Target OpenChamber instance port
-  --host                  Bind address when auto-starting an instance
-  --lan                   Bind to 0.0.0.0 when auto-starting an instance
-  --ui-password           Protect browser UI when auto-starting an instance
-  --api-only              Start API routes only when auto-starting an instance
-  --json                  Output machine-readable JSON
-  --all                   Apply to all running instances (doctor default, stop)
-
-START OPTIONS:
-  --provider <id>         Tunnel provider id (default: cloudflare)
-  --mode <id>             Tunnel mode (default: quick)
-  --profile <name>        Start tunnel from saved profile name
-  --config [path]         Managed-local config path (optional)
-  --token <token>         Managed-remote token (visible in process list)
-  --token-file <path>     Read token from file (recommended)
-  --token-stdin           Read token from stdin
-  --hostname <hostname>   Managed-remote hostname
-  --connect-ttl <value>   Connect-link TTL (e.g. 30m, 24h, 1d)
-  --session-ttl <value>   Session TTL (e.g. 8h, 24h, 1d)
-  --qr                    Print QR code for resulting tunnel URL
-  --no-qr                 Disable QR output
-  --dry-run               Validate inputs without applying changes
-
-OUTPUT OPTIONS:
-  --show-secrets          Show full tokens in output (default: redacted)
-  --plain                 Disable colors and decorations
-  -q, --quiet             Suppress non-essential output
-  --json                  Output machine-readable JSON
-
-BEHAVIOR NOTES:
-  - One active tunnel per OpenChamber instance.
-  - Starting a different mode/provider replaces the current tunnel and revokes old connect links/sessions.
-  - Connect links are one-time; generating a new link revokes the previous unused link.
-
-PROFILE USAGE:
-  openchamber tunnel profile list [--provider <id>] [--json]
-  openchamber tunnel profile show --name <name> [--provider <id>] [--json]
-  openchamber tunnel profile add --provider <id> --mode managed-remote --name <name> --hostname <host> --token <token> [--force] [--json]
-  openchamber tunnel profile add --provider <id> --mode managed-remote --name <name> --hostname <host> --token-file <path> [--force] [--json]
-  openchamber tunnel profile remove --name <name> [--provider <id>] [--json]
-
-SHELL COMPLETION:
-  openchamber tunnel completion bash   Generate Bash completion script
-  openchamber tunnel completion zsh    Generate Zsh completion script
-  openchamber tunnel completion fish   Generate Fish completion script
-
-EXAMPLES:
-  openchamber tunnel providers
-  openchamber tunnel ready --provider cloudflare
-  openchamber tunnel doctor --provider cloudflare
-  openchamber tunnel status
-  openchamber tunnel start --qr
-  openchamber tunnel start --profile prod-main
-  openchamber tunnel start --provider cloudflare --mode managed-remote --token-file ~/.secrets/cf-token --hostname app.example.com
-  openchamber tunnel start --provider cloudflare --mode managed-local --config ~/.cloudflared/config.yml
-  openchamber tunnel start --dry-run --provider cloudflare --mode managed-remote --token-file ~/.secrets/cf-token --hostname app.example.com
-  echo "$TOKEN" | openchamber tunnel profile add --provider cloudflare --mode managed-remote --name prod-main --hostname app.example.com --token-stdin
-  openchamber tunnel profile list --provider cloudflare
-  openchamber tunnel profile list --json --show-secrets
-  openchamber tunnel stop --port 3000
+tunnel is disabled in this local-only desktop build.
+Cloudflare/ngrok tunnels and connect bootstrap links are not available.
 `);
 }
 

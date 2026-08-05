@@ -1135,7 +1135,7 @@ describe("optimisticSend target directory", () => {
     let optimisticConfirm: OptimisticRemoveCall | null = null
     let sentMessageID = ""
 
-    const { markAmbiguousTransportFailure } = await import("@/lib/relay/transport-error")
+    const { markAmbiguousTransportFailure } = await import("@/lib/runtime-transport/transport-error")
     const { optimisticSend, setActionRefs, setOptimisticRefs } = await import("./session-actions")
     setActionRefs(mockSdk as unknown as OpencodeClient, childStores, () => "/target/project")
     setOptimisticRefs(

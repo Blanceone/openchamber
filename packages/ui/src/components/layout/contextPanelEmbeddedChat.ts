@@ -1,5 +1,5 @@
 import type { Theme } from '@/types/theme';
-import type { RelayRuntimeDescriptor } from '@/lib/relay/runtime-tunnel';
+import type { RelayRuntimeDescriptor } from '@/lib/runtime-transport/runtime-tunnel';
 
 export type EmbeddedSessionChatThemeBootstrap = {
   mode: 'light' | 'dark' | 'system';

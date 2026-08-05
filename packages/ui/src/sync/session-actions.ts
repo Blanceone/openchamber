@@ -29,7 +29,7 @@ import { withContextObligatoryMessage, type ContextObligatoryMessage } from "@/l
 import { getImperativeSessionMessageLoader } from "./session-message-loader"
 import { cleanupPersistedSessionState } from "./session-deletion-cleanup"
 import { getRuntimeKey } from "@/lib/runtime-switch"
-import { isAmbiguousTransportFailure } from "@/lib/relay/transport-error"
+import { isAmbiguousTransportFailure } from "@/lib/runtime-transport/transport-error"
 
 const MESSAGE_REFETCH_LIMIT = 100
 const SEND_CONFIRMATION_REFETCH_LIMIT = 30

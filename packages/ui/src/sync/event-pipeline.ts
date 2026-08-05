@@ -16,8 +16,8 @@ import type { Event, OpencodeClient, SessionStatus } from "@opencode-ai/sdk/v2/c
 import { opencodeClient } from "@/lib/opencode/client"
 import { getRuntimeUrlResolver } from "@/lib/runtime-url"
 import { clearRuntimeUrlAuthToken, refreshRuntimeUrlAuthToken } from "@/lib/runtime-auth"
-import { type RelayTunnelWebSocket } from "@/lib/relay/tunnel-client"
-import { openRuntimeWebSocket } from "@/lib/relay/runtime-socket"
+import { type RelayTunnelWebSocket } from "@/lib/runtime-transport/browser-websocket"
+import { openRuntimeWebSocket } from "@/lib/runtime-transport/runtime-socket"
 import { syncDebug } from "./debug"
 import { countSyncPerformance } from "./performance-diagnostics"
 

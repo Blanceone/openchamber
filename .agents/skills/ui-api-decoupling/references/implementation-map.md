@@ -6,6 +6,7 @@
 - `packages/ui/src/lib/runtime-fetch.ts`: runtime HTTP URL resolution and auth while preserving SDK `Request` fidelity.
 - `packages/ui/src/lib/runtime-url.ts`: browser/realtime URL construction.
 - `packages/ui/src/lib/runtime-auth.ts`: bearer state and short-lived URL-token minting.
+- `packages/ui/src/lib/runtime-transport/`: native WebSocket wrapper + ambiguous transport-error tagging (private relay removed).
 - `packages/ui/src/lib/api/types.ts`: shared `RuntimeAPIs` contract.
 - `packages/ui/src/contexts/RuntimeAPIProvider.tsx`: React provider and runtime API wrappers.
 - `packages/ui/src/hooks/useRuntimeAPIs.ts`: React consumption path.

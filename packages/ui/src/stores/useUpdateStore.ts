@@ -12,7 +12,7 @@ import {
   isWebRuntime,
 } from '@/lib/desktop';
 import { runtimeFetch } from '@/lib/runtime-fetch';
-import { getClientPlatform, isCapacitorApp } from '@/lib/platform';
+import { getClientPlatform } from '@/lib/platform';
 
 declare const __APP_VERSION__: string | undefined;
 
@@ -177,9 +177,6 @@ async function checkForWebUpdates(runtime: ClientRuntime, currentVersion?: strin
 }
 
 function detectRuntimeType(): 'desktop' | 'web' | 'vscode' | 'mobile' | null {
-  if (isCapacitorApp()) {
-    return 'mobile';
-  }
   if (isElectronShell()) {
     return 'desktop';
   }

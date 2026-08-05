@@ -8,8 +8,8 @@
 
 import { getRuntimeUrlResolver } from '@/lib/runtime-url';
 import { refreshRuntimeUrlAuthToken } from '@/lib/runtime-auth';
-import { openRuntimeWebSocket } from '@/lib/relay/runtime-socket';
-import { type RelayTunnelWebSocket } from '@/lib/relay/tunnel-client';
+import { openRuntimeWebSocket } from '@/lib/runtime-transport/runtime-socket';
+import { type RelayTunnelWebSocket } from '@/lib/runtime-transport/browser-websocket';
 
 export interface DictationStartOptions {
     provider?: 'local' | 'openai-compatible';

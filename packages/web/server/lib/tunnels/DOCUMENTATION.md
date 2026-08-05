@@ -1,5 +1,12 @@
 # Tunnels Module Documentation
 
+## Local-desktop status
+
+`startWebUiServer` always uses `createDisabledTunnelRuntimeContext` — tunnel HTTP
+routes are not mounted and no cloudflared/ngrok child process is started. Provider
+modules remain on disk for CLI leftovers (`cli-tunnel-capabilities`, etc.) until a
+later deletion pass. CLI `openchamber tunnel` / `connect-url` stay entry stubs.
+
 ## Purpose
 This module contains tunnel provider orchestration for OpenChamber, including provider registry/service wiring, managed remote token config lifecycle, and tunnel HTTP route registration.
 

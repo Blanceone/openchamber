@@ -1,6 +1,6 @@
 import type { CreateTerminalOptions, TerminalError, TerminalHandlers, TerminalSession, TerminalShellOption, TerminalStreamEvent } from './api/types';
-import { openRuntimeWebSocket } from './relay/runtime-socket';
-import type { RelayTunnelWebSocket } from './relay/tunnel-client';
+import { openRuntimeWebSocket } from './runtime-transport/runtime-socket';
+import type { RelayTunnelWebSocket } from './runtime-transport/browser-websocket';
 import { runtimeFetch } from './runtime-fetch';
 import { getRuntimeUrlResolver } from './runtime-url';
 import { clearRuntimeUrlAuthToken, refreshRuntimeUrlAuthToken } from './runtime-auth';

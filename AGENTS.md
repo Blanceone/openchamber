@@ -37,6 +37,10 @@ Shared contracts must define intentional behavior for the Windows desktop runtim
 - Do not modify `../opencode`; it is a separate repository.
 - Do not run git or GitHub commands unless the user explicitly asks.
 - Do not add dependencies unless explicitly requested.
+- On this Windows workstation: download dependency caches/archives only under
+  `../depends` (`D:\work\ai\openchamber\depends`); install compilers/SDKs/build
+  toolchains only under `D:\work\ai\builder_tools`. See
+  `.cursor/rules/local-windows-paths.mdc`.
 - Never add or log secrets, bearer tokens, pairing credentials, or sensitive user data.
 - Keep changes minimal and preserve unrelated worktree changes.
 - Enforce security and correctness in core/runtime logic, not only UI visibility or prompts.

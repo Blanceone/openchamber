@@ -1,6 +1,14 @@
 # Relay Module Documentation
 
-## Purpose
+## Local-desktop status
+
+Private-relay **client crypto** was removed from `packages/ui` (desktop uses
+`packages/ui/src/lib/runtime-transport/` instead). Host-side modules under this
+directory remain on disk for APNs `signing-key.js` sharing and CLI leftovers, but
+`startWebUiServer` always uses `createDisabledRelayService()` — no management
+routes, no outbound host client, no reconcile timer.
+
+## Purpose (historical full design)
 
 The private relay lets an OpenChamber client (mobile app, browser, or another desktop) reach a user's OpenChamber instance through OpenChamber-hosted infrastructure when the instance is not directly reachable (behind NAT, no public URL, no tunnel). The instance dials **outbound** to the relay; nothing needs to be exposed inbound.
 

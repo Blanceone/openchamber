@@ -32,7 +32,7 @@ import { runtimeFetch } from '@/lib/runtime-fetch';
 import { getRuntimeBearerTokenSync, getRuntimeExtraHeadersSync, refreshRuntimeUrlAuthToken } from '@/lib/runtime-auth';
 import { getRuntimeUrlResolver } from '@/lib/runtime-url';
 import { getRuntimeApiBaseUrl, getRuntimeKey } from '@/lib/runtime-switch';
-import { getActiveRelayDescriptor } from '@/lib/relay/runtime-tunnel';
+import { getActiveRelayDescriptor } from '@/lib/runtime-transport/runtime-tunnel';
 import { getPreviewTargetRecoveryAction } from '@/lib/preview/proxy-response';
 import { Icon } from "@/components/icon/Icon";
 import { OpenChamberLogo } from "@/components/ui/OpenChamberLogo";

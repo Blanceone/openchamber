@@ -1,0 +1,20 @@
+---
+description: Local Windows path constraints for dependencies and build tools
+alwaysApply: true
+---
+
+# Local Windows Path Constraints
+
+When downloading, installing, caching, or unpacking anything on this machine for OpenChamber work:
+
+1. **Dependencies / libraries / package caches / downloaded archives** must live under:
+   `D:\work\ai\openchamber\depends` (repo-relative `../depends` from the OpenChamber repo root).
+   Do not put them in the repo root, user home, temp, Desktop, or arbitrary drives.
+
+2. **Compilers, SDKs, build toolchains, and native build helpers** must live under:
+   `D:\work\ai\builder_tools`.
+   Do not install VS Build Tools, CMake, Ninja, or similar into default Program Files paths unless the user explicitly overrides this rule.
+
+3. Prefer configuring package managers and tool installers with explicit prefix/cache directories pointing at those roots (for example `npm`/`bun` cache, Electron download cache, toolchain prefix).
+
+4. If a tool cannot honor these paths, stop and tell the user before installing elsewhere.

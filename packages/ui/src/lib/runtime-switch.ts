@@ -1,11 +1,10 @@
 import { refreshRuntimeUrlAuthToken, setRuntimeBearerToken, setRuntimeExtraHeaders } from '@/lib/runtime-auth';
 import { configureRuntimeUrlResolver } from '@/lib/runtime-url';
 import {
-  activateRelayTunnel,
   deactivateRelayTunnel,
   getActiveRelayTunnel,
   type RelayRuntimeDescriptor,
-} from '@/lib/relay/runtime-tunnel';
+} from '@/lib/runtime-transport/runtime-tunnel';
 
 export { getActiveRelayTunnel };
 
@@ -162,14 +161,12 @@ export const switchRuntimeEndpoint = (options: { apiBaseUrl: string; clientToken
   configureRuntimeUrlResolver({ apiBaseUrl, realtimeBaseUrl: apiBaseUrl });
   setRuntimeExtraHeaders(options.requestHeaders || null);
   setRuntimeBearerToken(options.clientToken || null);
-  // Relay mode routes runtime HTTP/WS through an E2EE tunnel instead of the
-  // network. Activate the tunnel BEFORE minting the url token, since the mint
-  // itself rides the tunnel (runtimeFetch -> tunnel.fetch).
+  // Private relay activation is disabled for the local-desktop product. Keep
+  // deactivate so runtime switches clear any leftover singleton state.
   if (options.relay) {
-    activateRelayTunnel(options.relay);
-  } else {
-    deactivateRelayTunnel();
+    console.warn('[runtime-switch] Ignoring relay descriptor; private relay is disabled in this build.');
   }
+  deactivateRelayTunnel();
   void refreshRuntimeUrlAuthToken(apiBaseUrl).catch(() => {});
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent<RuntimeEndpointChangedDetail>(RUNTIME_ENDPOINT_CHANGED_EVENT, {

@@ -12,7 +12,7 @@ import type {
   TextPartInput,
   FilePartInput,
 } from "@opencode-ai/sdk/v2";
-import { isAmbiguousTransportFailure, markAmbiguousTransportFailure } from "@/lib/relay/transport-error";
+import { isAmbiguousTransportFailure, markAmbiguousTransportFailure } from "@/lib/runtime-transport/transport-error";
 import type { PermissionRequest } from "@/types/permission";
 import type { QuestionRequest } from "@/types/question";
 

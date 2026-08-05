@@ -1,5 +1,3 @@
-import { getActiveRelayTunnel } from '@/lib/relay/runtime-tunnel';
-
 type RuntimeAuthCredential =
   | { type: 'bearer'; token: string }
   | null;
@@ -230,16 +228,11 @@ const mintRuntimeUrlAuthToken = (apiBaseUrl?: string | null): Promise<string> =>
     if (credential?.type === 'bearer') {
       headers.set('Authorization', `Bearer ${credential.token}`);
     }
-    // In relay mode the mint must ride the tunnel, not the network: there is no
-    // reachable network base URL. Same auth headers, same route, tunneled.
-    const relay = getActiveRelayTunnel();
-    const response = relay
-      ? await relay.fetch('/auth/url-token', { method: 'POST', headers })
-      : await fetch(buildAuthUrl(apiBaseUrl, '/auth/url-token'), {
-          method: 'POST',
-          headers,
-          credentials: 'include',
-        });
+    const response = await fetch(buildAuthUrl(apiBaseUrl, '/auth/url-token'), {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+    });
     if (!response.ok) {
       if (generation === runtimeAuthGeneration) {
         clearRuntimeUrlAuthToken();

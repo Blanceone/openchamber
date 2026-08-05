@@ -21,11 +21,7 @@ import {
 import { formatModelsOutput } from './lib/commands-models.js';
 import { formatProjectLine } from './lib/commands-projects.js';
 import { resolveTargetPort } from './lib/cli-api-target.js';
-import { DEFAULT_TUNNEL_PROVIDER_CAPABILITIES } from './lib/cli-tunnel-capabilities.js';
-import {
-  TUNNEL_PROVIDER_CLOUDFLARE,
-  TUNNEL_PROVIDER_NGROK,
-} from '../server/lib/tunnels/types.js';
+import { DEFAULT_TUNNEL_PROVIDER_CAPABILITIES, TUNNEL_PROVIDER_CLOUDFLARE, TUNNEL_PROVIDER_NGROK } from './lib/cli-tunnel-capabilities.js';
 import {
   assertAuthenticatedNetworkExposure,
   commands,

@@ -1,3 +1,5 @@
+import { LOCAL_DESKTOP_REMOTE_DISABLED, respondRemoteDisabled } from '../local-desktop-remote.js';
+
 const parsePushSubscribeBody = (body) => {
   if (!body || typeof body !== 'object') return null;
   const endpoint = body.endpoint;
@@ -143,10 +145,12 @@ export const registerNotificationRoutes = (app, dependencies) => {
     return res.json({ ok: true });
   });
 
-  // Native iOS APNs device token registration (mirrors /api/push/subscribe). The token
-  // is a hex APNs device token from @capacitor/push-notifications, scoped to the UI
-  // session like web-push subscriptions.
+  // Native iOS APNs device token registration. Local-desktop builds keep the
+  // handlers as 410 stubs — mobile/Capacitor is out of product scope.
   app.post('/api/push/apns-token', async (req, res) => {
+    if (LOCAL_DESKTOP_REMOTE_DISABLED) {
+      return respondRemoteDisabled(res);
+    }
     await ensureSessionWatcher();
 
     const uiToken = uiAuthController?.ensureSessionToken
@@ -172,6 +176,9 @@ export const registerNotificationRoutes = (app, dependencies) => {
   });
 
   app.delete('/api/push/apns-token', async (req, res) => {
+    if (LOCAL_DESKTOP_REMOTE_DISABLED) {
+      return respondRemoteDisabled(res);
+    }
     const uiToken = uiAuthController?.ensureSessionToken
       ? await uiAuthController.ensureSessionToken(req, res)
       : getUiSessionTokenFromRequest(req);

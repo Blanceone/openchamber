@@ -12,10 +12,6 @@ import crypto from 'crypto';
 import http2 from 'node:http2';
 import { createUiAuth } from './lib/ui-auth/ui-auth.js';
 import { createTunnelAuth } from './lib/opencode/tunnel-auth.js';
-import { createManagedTunnelConfigRuntime } from './lib/tunnels/managed-config.js';
-import { createTunnelProviderRegistry } from './lib/tunnels/registry.js';
-import { createCloudflareTunnelProvider } from './lib/tunnels/providers/cloudflare.js';
-import { createNgrokTunnelProvider } from './lib/tunnels/providers/ngrok.js';
 import { createRequestSecurityRuntime } from './lib/security/request-security.js';
 import {
   getUnauthenticatedLanErrorMessage,
@@ -27,7 +23,6 @@ import {
   TUNNEL_MODE_MANAGED_REMOTE,
   TUNNEL_MODE_QUICK,
   TUNNEL_PROVIDER_CLOUDFLARE,
-  TunnelServiceError,
   isSupportedTunnelMode,
   normalizeOptionalPath,
   normalizeTunnelStartRequest,
@@ -78,7 +73,6 @@ import { createSessionGoalRuntime } from './lib/session-goal/runtime.js';
 import { createContextObligatoryRuntime } from './lib/context-obligatory/runtime.js';
 import { createScheduledTasksRuntime } from './lib/scheduled-tasks/runtime.js';
 import { createServerStartupRuntime } from './lib/opencode/server-startup-runtime.js';
-import { createTunnelWiringRuntime } from './lib/opencode/tunnel-wiring-runtime.js';
 import { createStartupPipelineRuntime } from './lib/opencode/startup-pipeline-runtime.js';
 import { runCliEntryIfMain } from './lib/opencode/cli-entry-runtime.js';
 import { registerNotificationRoutes } from './lib/notifications/routes.js';
@@ -91,11 +85,17 @@ import { createPermissionAutoAcceptRuntime } from './lib/permission-auto-accept/
 import { createGracefulShutdownRuntime } from './lib/opencode/shutdown-runtime.js';
 import { createProjectConfigRuntime } from './lib/projects/project-config.js';
 import { createRemoteClientAuthRuntime } from './lib/client-auth/remote-clients.js';
-import { createClientPairingRuntime } from './lib/client-auth/pairing.js';
 import { createPreviewProxyRuntime } from './lib/preview/proxy-runtime.js';
 import { attachRealtimeProxy } from './lib/realtime-proxy.js';
-import { createRelayService } from './lib/relay/service.js';
-import { createRelayHostLock } from './lib/relay/host-lock.js';
+import {
+  LOCAL_DESKTOP_REMOTE_DISABLED,
+  createDisabledManagedTunnelConfigRuntime,
+  createDisabledPairingRuntime,
+  createDisabledRelayService,
+  createDisabledTunnelRuntimeContext,
+  registerDisabledRemoteRouteStubs,
+  respondRemoteDisabled,
+} from './lib/local-desktop-remote.js';
 import { createAgentToolRuntime } from './lib/agent-tool/runtime.js';
 import { createSystemPromptRuntime } from './lib/system-prompt/runtime.js';
 import { createOpenChamberSessionService } from './lib/openchamber-sessions/routes.js';
@@ -292,22 +292,8 @@ const SETTINGS_FILE_PATH = path.join(OPENCHAMBER_DATA_DIR, 'settings.json');
 const PUSH_SUBSCRIPTIONS_FILE_PATH = path.join(OPENCHAMBER_DATA_DIR, 'push-subscriptions.json');
 const APNS_TOKENS_FILE_PATH = path.join(OPENCHAMBER_DATA_DIR, 'apns-tokens.json');
 const REMOTE_CLIENTS_FILE_PATH = path.join(OPENCHAMBER_DATA_DIR, 'remote-clients.json');
-const CLIENT_PAIRING_SESSIONS_FILE_PATH = path.join(OPENCHAMBER_DATA_DIR, 'client-pairing-sessions.json');
-const CLOUDFLARE_MANAGED_REMOTE_TUNNELS_FILE_PATH = path.join(OPENCHAMBER_DATA_DIR, 'cloudflare-managed-remote-tunnels.json');
-const CLOUDFLARE_LEGACY_NAMED_TUNNELS_FILE_PATH = path.join(OPENCHAMBER_DATA_DIR, 'cloudflare-named-tunnels.json');
-const CLOUDFLARE_MANAGED_REMOTE_TUNNELS_VERSION = 1;
 
-const managedTunnelConfigRuntime = createManagedTunnelConfigRuntime({
-  fsPromises,
-  path,
-  normalizeManagedRemoteTunnelHostname,
-  normalizeManagedRemoteTunnelPresets,
-  constants: {
-    CLOUDFLARE_MANAGED_REMOTE_TUNNELS_FILE_PATH,
-    CLOUDFLARE_LEGACY_NAMED_TUNNELS_FILE_PATH,
-    CLOUDFLARE_MANAGED_REMOTE_TUNNELS_VERSION,
-  },
-});
+const managedTunnelConfigRuntime = createDisabledManagedTunnelConfigRuntime();
 
 const readManagedRemoteTunnelConfigFromDisk = (...args) => managedTunnelConfigRuntime.readManagedRemoteTunnelConfigFromDisk(...args);
 const syncManagedRemoteTunnelConfigWithPresets = (...args) => managedTunnelConfigRuntime.syncManagedRemoteTunnelConfigWithPresets(...args);
@@ -499,14 +485,7 @@ let exitOnShutdown = true;
 let uiAuthController = null;
 let activeTunnelController = null;
 let globalWatcherStartPromise = null;
-const tunnelProviderRegistry = createTunnelProviderRegistry([
-  createCloudflareTunnelProvider(),
-  createNgrokTunnelProvider(),
-]);
-tunnelProviderRegistry.seal();
 const tunnelAuthController = createTunnelAuth();
-let runtimeManagedRemoteTunnelToken = '';
-let runtimeManagedRemoteTunnelHostname = '';
 let terminalRuntime = null;
 let dictationRuntime = null;
 let messageStreamRuntime = null;
@@ -944,13 +923,7 @@ const remoteClientAuthRuntime = createRemoteClientAuthRuntime({
   crypto,
   storePath: REMOTE_CLIENTS_FILE_PATH,
 });
-const clientPairingRuntime = createClientPairingRuntime({
-  fsPromises,
-  path,
-  crypto,
-  storePath: CLIENT_PAIRING_SESSIONS_FILE_PATH,
-  remoteClientAuthRuntime,
-});
+const clientPairingRuntime = createDisabledPairingRuntime();
 const featureRoutesRuntime = createFeatureRoutesRuntime({
   clientReloadDelayMs: CLIENT_RELOAD_DELAY_MS,
 });
@@ -964,40 +937,6 @@ const bootstrapRuntime = createBootstrapRuntime({
   registerOpenChamberRoutes,
   registerAgentToolRoutes: (app, options) => options.agentToolRuntime.registerRoutes(app, options.express),
   express,
-});
-const tunnelWiringRuntime = createTunnelWiringRuntime({
-  crypto,
-  URL,
-  tunnelProviderRegistry,
-  tunnelAuthController,
-  readSettingsFromDiskMigrated,
-  readManagedRemoteTunnelConfigFromDisk,
-  normalizeTunnelProvider,
-  normalizeTunnelMode,
-  normalizeOptionalPath,
-  normalizeManagedRemoteTunnelHostname,
-  normalizeTunnelBootstrapTtlMs,
-  normalizeTunnelSessionTtlMs,
-  isSupportedTunnelMode,
-  upsertManagedRemoteTunnelToken,
-  resolveManagedRemoteTunnelToken,
-  TUNNEL_MODE_QUICK,
-  TUNNEL_MODE_MANAGED_LOCAL,
-  TUNNEL_MODE_MANAGED_REMOTE,
-  TUNNEL_PROVIDER_CLOUDFLARE,
-  TunnelServiceError,
-  getActiveTunnelController: () => activeTunnelController,
-  setActiveTunnelController: (value) => {
-    activeTunnelController = value;
-  },
-  getRuntimeManagedRemoteTunnelHostname: () => runtimeManagedRemoteTunnelHostname,
-  setRuntimeManagedRemoteTunnelHostname: (value) => {
-    runtimeManagedRemoteTunnelHostname = value;
-  },
-  getRuntimeManagedRemoteTunnelToken: () => runtimeManagedRemoteTunnelToken,
-  setRuntimeManagedRemoteTunnelToken: (value) => {
-    runtimeManagedRemoteTunnelToken = value;
-  },
 });
 const startupPipelineRuntime = createStartupPipelineRuntime({
   createTerminalRuntime,
@@ -1383,7 +1322,9 @@ async function main(options = {}) {
     || typeof options.tunnelConfigPath === 'string'
     || typeof options.tunnelToken === 'string'
     || typeof options.tunnelHostname === 'string';
-  const startupTunnelRequest = shouldUseCanonicalTunnelConfig
+  const startupTunnelRequest = LOCAL_DESKTOP_REMOTE_DISABLED
+    ? null
+    : (shouldUseCanonicalTunnelConfig
     ? normalizeTunnelStartRequest({
         provider: normalizeTunnelProvider(options.tunnelProvider),
         mode: options.tunnelMode,
@@ -1399,7 +1340,7 @@ async function main(options = {}) {
           token: '',
           hostname: undefined,
         }
-      : null);
+      : null));
   const attachSignals = options.attachSignals !== false;
   const onTunnelReady = typeof options.onTunnelReady === 'function' ? options.onTunnelReady : null;
   if (typeof options.exitOnShutdown === 'boolean') {
@@ -1515,8 +1456,10 @@ async function main(options = {}) {
     tunnelAuthController,
     remoteClientAuthRuntime,
     clientPairingRuntime,
+    remoteAccessEnabled: !LOCAL_DESKTOP_REMOTE_DISABLED,
+    respondRemoteDisabled,
     getRelayPairingCandidate: (options) => {
-      if (!relayServiceInstance) return null;
+      if (LOCAL_DESKTOP_REMOTE_DISABLED || !relayServiceInstance) return null;
       // A relay pairing link enables the relay on demand; a plain link only
       // advertises relay when it is already on.
       return options?.ensureEnabled
@@ -1583,38 +1526,13 @@ async function main(options = {}) {
     isRequestOriginAllowed,
   });
 
-  const tunnelRuntimeContext = tunnelWiringRuntime.initialize(app, port);
+  // Local-desktop builds keep tunnel/relay modules on disk for CLI leftovers but
+  // never mount their HTTP surfaces or start outbound host clients.
+  const tunnelRuntimeContext = createDisabledTunnelRuntimeContext(port);
   const { tunnelService, startTunnelWithNormalizedRequest } = tunnelRuntimeContext;
+  registerDisabledRemoteRouteStubs(app);
 
-  // Private relay host service: config + management routes + host client
-  // lifecycle. Loopback port comes from the same source the tunnel uses so
-  // relay-tunneled requests hit the local Express app on 127.0.0.1.
-  const relayService = createRelayService({
-    crypto,
-    os,
-    readSettingsFromDiskMigrated,
-    writeSettingsToDisk,
-    readSettingsStrict: readSettingsFromDiskStrict,
-    remoteClientAuthRuntime,
-    getLocalPort: () => tunnelRuntimeContext.getActivePort(),
-    // One relay host per machine: every instance sharing this data dir shares
-    // the relay identity (serverId), so concurrent hosts evict each other at
-    // the relay worker and devices land on a random local instance.
-    hostLock: createRelayHostLock({
-      lockFilePath: path.join(OPENCHAMBER_DATA_DIR, 'relay-host.lock'),
-      fs,
-      process,
-    }),
-    // Relay demand = any paired device or pending pairing session that uses the
-    // relay transport. Drives the auto on/off lifecycle.
-    hasRelayDemand: async () => {
-      const [pendingRelay, deviceRelay] = await Promise.all([
-        clientPairingRuntime.hasActiveRelaySession().catch(() => false),
-        remoteClientAuthRuntime.hasActiveRelayClients().catch(() => false),
-      ]);
-      return pendingRelay || deviceRelay;
-    },
-  });
+  const relayService = createDisabledRelayService();
   relayServiceInstance = relayService;
   relayService.registerRoutes(app);
 
@@ -1734,19 +1652,16 @@ async function main(options = {}) {
     console.warn('[ScheduledTasks] Failed to start runtime:', error?.message || error);
   }
 
-  // Only opens a relay control socket when the user opted in (config enabled).
-  // Reconcile the relay lifecycle from demand on startup: run it if any relay
-  // device/session exists, stop it (and clear a stale enabled flag) otherwise.
-  void relayService.reconcile();
-
-  // Relay demand can change outside our routes: `openchamber connect-url
-  // --relay` writes a pending relay session straight to the on-disk store, and
-  // pending sessions expire without any request hitting us. Poll reconcile so a
-  // headless instance picks the relay up (or drops it) within a minute.
-  const relayReconcileTimer = setInterval(() => {
+  // Local-desktop builds never open a relay control socket. Full builds still
+  // reconcile from demand on startup and poll for out-of-band connect-url writes.
+  let relayReconcileTimer = null;
+  if (!LOCAL_DESKTOP_REMOTE_DISABLED) {
     void relayService.reconcile();
-  }, 60_000);
-  relayReconcileTimer.unref?.();
+    relayReconcileTimer = setInterval(() => {
+      void relayService.reconcile();
+    }, 60_000);
+    relayReconcileTimer.unref?.();
+  }
 
   return {
     expressApp: app,
@@ -1778,7 +1693,7 @@ async function main(options = {}) {
     },
     stop: (shutdownOptions = {}) => {
       realtimeProxyRuntime.stop();
-      clearInterval(relayReconcileTimer);
+      if (relayReconcileTimer) clearInterval(relayReconcileTimer);
       try {
         relayService.stop();
       } catch {

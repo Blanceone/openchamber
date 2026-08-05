@@ -212,7 +212,6 @@ const APP_VERSION = APP_METADATA.version;
 
 const DEFAULT_DESKTOP_PORT = 57123;
 const LOOPBACK_BIND_HOST = '127.0.0.1';
-const LAN_BIND_HOST = '0.0.0.0';
 const MIN_WINDOW_WIDTH = 800;
 const MIN_WINDOW_HEIGHT = 520;
 const MIN_RESTORE_WINDOW_WIDTH = 900;
@@ -488,7 +487,6 @@ const refreshQuitRiskFlags = async () => {
   if (!base) return;
 
   const scheduledUrl = `${base}/api/openchamber/scheduled-tasks/status`;
-  const tunnelUrl = `${base}/api/openchamber/tunnel/status`;
 
   const fetchJson = async (url) => {
     try {
@@ -500,7 +498,8 @@ const refreshQuitRiskFlags = async () => {
     }
   };
 
-  const [scheduled, tunnel] = await Promise.all([fetchJson(scheduledUrl), fetchJson(tunnelUrl)]);
+  // Tunnel status is not queried: local-desktop builds disable tunnel routes.
+  const scheduled = await fetchJson(scheduledUrl);
 
   if (scheduled && typeof scheduled === 'object') {
     const enabledCount = Number(scheduled.enabledScheduledTasksCount ?? 0);
@@ -511,9 +510,7 @@ const refreshQuitRiskFlags = async () => {
     quitRisk.hasRunningScheduledTasks = Boolean(scheduled.hasRunningScheduledTasks) || quitRisk.runningScheduledTasksCount > 0;
   }
 
-  if (tunnel && typeof tunnel === 'object') {
-    quitRisk.hasActiveTunnel = Boolean(tunnel.active);
-  }
+  quitRisk.hasActiveTunnel = false;
 };
 
 const settingsFilePath = () => {
@@ -1407,17 +1404,14 @@ const spawnLocalServer = async () => {
 
   const settings = readSettingsRoot();
   const storedPort = Number.isFinite(settings.desktopLocalPort) ? settings.desktopLocalPort : null;
-  // When the user enables "Desktop Network Access" we bind on all interfaces
-  // so phones/tablets on the same Wi-Fi can reach the app. UI shows a clear
-  // warning and persists the flag via /api/config/settings.
-  const lanAccessEnabled = settings.desktopLanAccessEnabled === true;
+  // Local-only desktop build: always bind loopback. Ignore persisted LAN /
+  // desktop UI-password network exposure settings so remote access cannot be
+  // re-enabled from an old settings.json.
   setDesktopKeepAwakeActive(settings.desktopKeepAwakeEnabled === true);
   const desktopUiPassword = typeof settings.desktopUiPassword === 'string' ? settings.desktopUiPassword.trim() : '';
-  const lanAccessBlockedByMissingPassword = lanAccessEnabled && !desktopUiPassword;
-  const effectiveLanAccessEnabled = lanAccessEnabled && !lanAccessBlockedByMissingPassword;
-  const bindHost = effectiveLanAccessEnabled ? LAN_BIND_HOST : LOOPBACK_BIND_HOST;
-  if (lanAccessBlockedByMissingPassword) {
-    log.warn('[desktop] LAN access was requested without a desktop UI password; starting on loopback only.');
+  const bindHost = LOOPBACK_BIND_HOST;
+  if (settings.desktopLanAccessEnabled === true) {
+    log.warn('[desktop] Ignoring desktopLanAccessEnabled; local-only desktop builds bind loopback only.');
   }
 
   // Probe before starting the server — main() in the server module sets up a
@@ -1440,12 +1434,8 @@ const spawnLocalServer = async () => {
   // set before the first import. After this point, the same env is used by
   // both the Electron main and the server running inside it.
   process.env.OPENCHAMBER_HOST = bindHost;
-  process.env.OPENCHAMBER_DESKTOP_LAN_ACCESS_ACTIVE = effectiveLanAccessEnabled ? 'true' : 'false';
-  if (lanAccessBlockedByMissingPassword) {
-    process.env.OPENCHAMBER_DESKTOP_LAN_ACCESS_BLOCKED_REASON = 'missing-password';
-  } else {
-    delete process.env.OPENCHAMBER_DESKTOP_LAN_ACCESS_BLOCKED_REASON;
-  }
+  process.env.OPENCHAMBER_DESKTOP_LAN_ACCESS_ACTIVE = 'false';
+  delete process.env.OPENCHAMBER_DESKTOP_LAN_ACCESS_BLOCKED_REASON;
   process.env.OPENCHAMBER_DIST_DIR = resolveWebDistDir();
   process.env.OPENCHAMBER_RUNTIME = 'desktop';
   // OpenCode uses process cwd as a fallback directory; app userData would make
@@ -1455,6 +1445,8 @@ const spawnLocalServer = async () => {
     homedir: () => os.homedir(),
   });
   process.env.OPENCHAMBER_DESKTOP_NOTIFY = 'true';
+  // Optional app-lock password from settings/env still applies (no settings UI
+  // to set it after LAN password fields were removed).
   if (desktopUiPassword) {
     process.env.OPENCHAMBER_UI_PASSWORD = desktopUiPassword;
   } else {
