@@ -4,7 +4,8 @@ OpenChamber 本机桌面裁剪 — 工作进展与后续事项
 分支：dev
 远程：origin = https://github.com/Blanceone/openchamber.git
 上游：upstream = https://github.com/openchamber/openchamber.git
-最近提交范围：阶段 C–E（相对 83ec399d 本机桌面裁剪提交）
+最近提交范围：阶段 C–F（相对 83ec399d；阶段 F 为 OpenCode 冒烟工作日志）
+本机已有安装包产物（2026-08-05，非本次重建）：packages/electron/dist/OpenChamber-1.18.1-win-x64.exe
 
 路径约束（必须遵守）
 --------------------
@@ -47,33 +48,52 @@ OpenChamber 本机桌面裁剪 — 工作进展与后续事项
 - CLI：不再 import commands-tunnel / cli-tunnel-profiles；capabilities 改为静态常量
 - 删除 .agents/skills/serve-sim 墓碑技能
 
+【阶段 F】OpenCode CLI 安装 + 会话/终端/Git 冒烟（本机，2026-08-06）
+- 安装 pinned OpenCode CLI 1.18.12 → D:\work\ai\openchamber\depends\opencode-cli\bin\opencode.exe
+  （归档缓存同目录树 1.18.12\win32-x64\；由既有 packages/electron/.cache 拷贝，未再下载到仓库内）
+- electron:dev 需将 bun.exe 目录加入 PATH（仅 bun.cmd/ps1 时 HMR 子进程 spawn bun ENOENT）
+- 启动时设置 OPENCODE_BINARY / OPENCHAMBER_BUNDLED_OPENCODE_CLI_DIR 指向上述 bin
+- 注意：Windows 下 packages/web 的 nodemon exec 字面量 `${OPENCHAMBER_PORT:-3001}` 未展开，
+  HMR API 落在 3000 而非 3901；Electron 探测 HMR API 失败后回退进程内 127.0.0.1:57123（冒烟以此为准）
+- 冒烟结束后已 taskkill 清理 electron/opencode/vite/nodemon 进程树
+
 三、验证
 --------
 已跑：
 - bun test：local-desktop-remote、runtime-switch、runtime-fetch、runtime-auth — 通过
 - bun test cli：fallback capabilities + tunnel disabled — 通过
 - node --check：server/index.js、cli.js、local-desktop-remote.js
-- electron:dev 部分冒烟：
-  - Electron 启动，本机服务 127.0.0.1:57123
-  - /api/client-auth/*、/connect、POST /api/push/apns-token → 410
-  - OpenCode CLI 未安装（spawn opencode ENOENT）— 环境问题
+- electron:dev + OpenCode 完整 API 冒烟（对 127.0.0.1:57123）：
+  - /health、/api/system/info → 200；runtime=desktop
+  - /api/opencode/health → {"healthy":true}；/api/opencode/version → 1.18.12
+  - /api/config/opencode-resolution → source=env，resolved=depends\opencode-cli\bin\opencode.exe
+  - 会话：POST/GET /api/session（含 directory=本仓库）创建/列出成功
+  - 终端：GET /api/terminal/shells；POST /api/terminal/create → running；DELETE → success
+  - Git：/api/git/check、status、toplevel、remote-url、diff?path=… → 可用
+  - 远程面：/connect、/api/client-auth/status、/api/push/apns-token、/api/openchamber/tunnel/status → 410
   - 冒烟结束后残留进程已清理
 
 未跑 / 未证明：
-- 完整会话 / 终端 / Git 页（需本机 OpenCode CLI）
-- electron:build 可分发安装包
+- 完整 GUI 点击路径（Settings 页目视确认无 Remote/Tunnel；仅 API/启动日志证据）
+- 在 builder_tools 工具链下重新跑通 electron:build（dist 里已有 08-05 产物，需复核/重建）
+
+产物位置（electron:build）：
+- 安装包 / win-unpacked / latest.yml → packages/electron/dist/
+- 中间态：resources/web-dist、dist-bundle/main.mjs、resources/opencode-cli/
+- 开发用 OpenCode CLI（非安装包）：D:\work\ai\openchamber\depends\opencode-cli\bin\
 
 四、刻意未做 / 后续
 ------------------
 优先级高：
-1. 安装 OpenCode CLI 后完整会话/终端/Git 冒烟
-2. 具备 VS Build Tools（装于 D:\work\ai\builder_tools）时跑 electron:build
+1. ~~安装 OpenCode CLI 后完整会话/终端/Git 冒烟~~（已完成，见阶段 F；本提交仅更新工作日志）
+2. 具备 VS Build Tools（装于 D:\work\ai\builder_tools）时跑 / 复核 electron:build
 3. 物理删除 tunnels 实现目录（保留 settings 仍用的 types）与大部分 relay/**（保留 signing-key 直至 APNs 彻底去掉）
 
 优先级中：
 4. 删除 commands-tunnel.js / commands-connect-url.js / cli-tunnel-profiles.js 等实现文件
 5. VS Code / Capacitor 运行时分支大扫除
 6. 评估独立「应用锁屏密码」设置（不绑定 LAN）
+6b. Windows HMR：修复 dev:server:watch 的 OPENCHAMBER_PORT 展开，避免 API 落错端口
 
 优先级低：
 7. CONTRIBUTING 写入 Windows 打包注意点与 depends/builder_tools 路径约束
@@ -81,7 +101,9 @@ OpenChamber 本机桌面裁剪 — 工作进展与后续事项
 
 五、冒烟清单
 ------------
-[x] electron:dev 能启动（本机服务 up；OpenCode 因 PATH 缺失未起）
-[ ] 设置无 Remote / Tunnel；Git 可用；会话正常；终端可用（需 OpenCode）
+[x] electron:dev 能启动（本机服务 57123；OpenCode 1.18.12 managed）
+[x] Git API 可用；会话 create/list 正常；终端 create/delete 可用（API 冒烟）
 [x] CLI tunnel/connect-url → disabled（测试覆盖）
-[x] 远程 API → client-auth/connect/apns 410；tunnel/relay 显式 stub
+[x] 远程 API → client-auth/connect/apns/tunnel 410
+[ ] Settings GUI 目视确认无 Remote / Tunnel 入口（未做点击路径）
+[ ] electron:build 安装包
