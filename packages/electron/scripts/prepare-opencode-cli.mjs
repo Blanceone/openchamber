@@ -9,7 +9,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const electronRoot = path.resolve(__dirname, '..');
 const workspaceRoot = path.resolve(electronRoot, '../..');
 const outputDir = path.join(electronRoot, 'resources', 'opencode-cli');
-const cacheRoot = path.join(electronRoot, '.cache', 'opencode-cli');
+// Prefer the workstation depends cache; fall back to package-local cache.
+const dependsCacheRoot = path.resolve(workspaceRoot, '../depends/opencode-cli');
+const cacheRoot = process.env.OPENCHAMBER_OPENCODE_CLI_CACHE
+  || (fs.existsSync(path.dirname(dependsCacheRoot)) ? dependsCacheRoot : path.join(electronRoot, '.cache', 'opencode-cli'));
 const rootPackagePath = path.join(workspaceRoot, 'package.json');
 
 const run = (command, args, options = {}) => {
@@ -89,11 +92,23 @@ const ensureExecutable = (filePath) => {
 
 const download = async (url, destination) => {
   fs.mkdirSync(path.dirname(destination), { recursive: true });
+  const temp = `${destination}.tmp`;
+  // Prefer curl.exe on Windows — Node fetch can fail behind some proxies/TLS paths.
+  if (process.platform === 'win32') {
+    const curl = spawnSync('curl.exe', ['-fsSL', '--ssl-no-revoke', url, '-o', temp], {
+      encoding: 'utf8',
+      stdio: 'pipe',
+      windowsHide: true,
+    });
+    if (curl.status === 0 && fs.existsSync(temp)) {
+      fs.renameSync(temp, destination);
+      return;
+    }
+  }
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to download ${url}: ${response.status} ${response.statusText}`);
   }
-  const temp = `${destination}.tmp`;
   fs.writeFileSync(temp, Buffer.from(await response.arrayBuffer()));
   fs.renameSync(temp, destination);
 };

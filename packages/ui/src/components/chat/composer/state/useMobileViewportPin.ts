@@ -1,12 +1,10 @@
 /**
  * Pinning the composer to the visual viewport in mobile browsers.
  *
- * Capacitor has a keyboard choreography that resizes the shell, so the
- * composer stays where it belongs on its own. A mobile browser has nothing of
- * the sort: Safari pans the visual viewport over an unchanged layout instead
- * of shrinking it, so a composer positioned in normal flow ends up partly
- * off-screen or behind the keyboard. Both effects here exist to put it back,
- * and both are deliberately restricted to non-Capacitor mobile.
+ * A mobile browser has no shell-level keyboard choreography: Safari pans the
+ * visual viewport over an unchanged layout instead of shrinking it, so a
+ * composer positioned in normal flow ends up partly off-screen or behind the
+ * keyboard. Both effects here exist to put it back on mobile browsers.
  *
  * Neither is verifiable from a test: they are corrections for specific WebKit
  * behaviors, and every guard in them marks a case that was observed breaking.
@@ -14,7 +12,6 @@
 
 import React from 'react';
 
-import { isCapacitorApp } from '@/lib/platform';
 import type { ComposerEditorHandle } from '../editor/ComposerEditor';
 
 export interface MobileViewportPinOptions {
@@ -46,7 +43,7 @@ export function useMobileViewportPin(options: MobileViewportPinOptions): void {
 
     // Fullscreen: fix the form over the whole visible viewport and track the pan.
     React.useLayoutEffect(() => {
-        if (!isMobile || !isFullscreen || isCapacitorApp()) return;
+        if (!isMobile || !isFullscreen) return;
         const vv = window.visualViewport;
         const form = formRef.current;
         const editor = editorRef.current;
@@ -100,7 +97,7 @@ export function useMobileViewportPin(options: MobileViewportPinOptions): void {
     // the visible bottom. The chat screen does not need this — its own
     // focused-field reveal works there.
     React.useLayoutEffect(() => {
-        if (!isMobile || isCapacitorApp()) return;
+        if (!isMobile) return;
         if (!isDraftScreen || isFullscreen || !isFocused) return;
         const vv = window.visualViewport;
         const form = formRef.current;

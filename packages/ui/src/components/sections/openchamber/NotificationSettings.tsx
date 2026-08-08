@@ -45,15 +45,7 @@ export const NotificationSettings: React.FC = () => {
   const { t } = useI18n();
   const isDesktop = React.useMemo(() => isDesktopShell(), []);
   const isVSCode = React.useMemo(() => isVSCodeRuntime(), []);
-  // The native Capacitor app runs in a WKWebView with no Web Notification API; it has its
-  // own native (Local Notifications) permission. Treat it as a native runtime, not a
-  // browser, so the toggle isn't gated on Notification.permission (which is stuck there).
-  const isNativeApp = React.useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    const capacitor = (window as typeof window & { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
-    return capacitor?.isNativePlatform?.() === true || window.location.protocol === 'capacitor:';
-  }, []);
-  const isBrowser = !isDesktop && !isVSCode && !isNativeApp;
+  const isBrowser = !isDesktop && !isVSCode;
   const nativeNotificationsEnabled = useUIStore(state => state.nativeNotificationsEnabled);
   const setNativeNotificationsEnabled = useUIStore(state => state.setNativeNotificationsEnabled);
   const notificationMode = useUIStore(state => state.notificationMode);
@@ -145,7 +137,7 @@ export const NotificationSettings: React.FC = () => {
     }
   };
 
-  const canShowNotifications = isDesktop || isVSCode || isNativeApp || (isBrowser && typeof Notification !== 'undefined' && Notification.permission === 'granted');
+  const canShowNotifications = isDesktop || isVSCode || (isBrowser && typeof Notification !== 'undefined' && Notification.permission === 'granted');
 
   const updateTemplate = (
     event: 'completion' | 'error' | 'question' | 'subtask',
@@ -476,10 +468,7 @@ export const NotificationSettings: React.FC = () => {
               ariaLabel={t('settings.notifications.page.delivery.enableAria')}
             />
 
-            {/* The native Capacitor app never notifies while focused (hard rule) and uses
-                generic, non-customizable text, so the "notify while focused" toggle and the
-                test button are hidden there. */}
-            {nativeNotificationsEnabled && canShowNotifications && !isNativeApp && (
+            {nativeNotificationsEnabled && canShowNotifications && (
               <>
                 <SettingsCheckboxRow
                   checked={notificationMode === 'always'}
@@ -555,7 +544,6 @@ export const NotificationSettings: React.FC = () => {
               </div>
             </SettingsSection>
 
-            {!isNativeApp && (
             <SettingsSection
               title={t('settings.notifications.page.template.title')}
               description={(
@@ -601,7 +589,6 @@ export const NotificationSettings: React.FC = () => {
                 ))}
               </SettingsTwoColumn>
             </SettingsSection>
-            )}
 
           </>
         )}

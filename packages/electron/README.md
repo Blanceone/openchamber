@@ -75,15 +75,17 @@ That runs, in order:
 2. `prepare:opencode-cli` to download/cache the pinned OpenCode CLI and copy it into `packages/electron/resources/opencode-cli`.
 3. `bundle:main` to create `packages/electron/dist-bundle/main.mjs`.
 4. `rebuild:native` to rebuild native modules for Electron.
-5. `package.mjs` to run `electron-builder --win` (NSIS).
+5. `package.mjs` to run the workspace-installed `electron-builder` CLI with `--win` (NSIS).
 
 Build output goes to `packages/electron/dist`.
 
 Windows packaging needs NSIS support through `electron-builder`. If no Windows signing env is set, `package.mjs` disables code signing and builds an unsigned installer. Windows updates use `latest.yml` for x64 and the `latest-arm64.yml` channel for ARM64 so each installation resolves an architecture-matching installer.
 
+On this workstation, prefer `ELECTRON_CACHE` / `ELECTRON_BUILDER_CACHE` under `../depends`, and install VS Build Tools (C++ workload + Windows SDK + Spectre libs) under `D:\work\ai\builder_tools`. Microsoft Windows Kits headers still land in the OS default Kits path.
+
 ## Bundled OpenCode CLI
 
-Packaged Desktop builds include the official OpenCode CLI that matches the pinned `@opencode-ai/sdk` version in the root `package.json`. `prepare:opencode-cli` downloads the Windows release artifact, caches it under `packages/electron/.cache/opencode-cli`, stages `opencode.exe` into `resources/opencode-cli`, and verifies `opencode --version` before packaging.
+Packaged Desktop builds include the official OpenCode CLI that matches the pinned `@opencode-ai/sdk` version in the root `package.json`. `prepare:opencode-cli` downloads the Windows release artifact, prefers cache under `../depends/opencode-cli` (override with `OPENCHAMBER_OPENCODE_CLI_CACHE`), stages `opencode.exe` into `resources/opencode-cli`, and verifies `opencode --version` before packaging. On Windows the download helper uses `curl.exe --ssl-no-revoke` when Node `fetch` fails TLS revocation checks.
 
 Managed local Desktop startup prefers OpenCode binaries in this order:
 

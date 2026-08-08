@@ -78,6 +78,13 @@ describe('local-desktop-remote', () => {
     expect(body.code).toBe('LOCAL_DESKTOP_REMOTE_DISABLED');
   });
 
+  test('disabled APNs runtime is a no-op', async () => {
+    const { createDisabledApnsRuntime } = await import('./local-desktop-remote.js');
+    const apns = createDisabledApnsRuntime();
+    expect(await apns.addOrUpdateApnsToken()).toMatchObject({ disabled: true });
+    expect(await apns.sendApnsToAllUiSessions()).toMatchObject({ sent: 0, disabled: true });
+  });
+
   test('registerDisabledRemoteRouteStubs mounts tunnel and relay denials', () => {
     const mounts = [];
     const app = {

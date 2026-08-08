@@ -35,6 +35,21 @@ This monorepo ships **Windows Desktop only**. Build output is written to `packag
 
 Windows builds create an NSIS installer. If signing env vars are not set, the build script makes an unsigned installer.
 
+### Local path constraints (this workstation)
+
+When downloading caches/archives or installing compilers for OpenChamber work:
+
+1. Put dependency caches, downloaded archives, and tool package caches under
+   `D:\work\ai\openchamber\depends` (repo-relative `../depends`).
+2. Install compilers, SDKs, and native build toolchains under
+   `D:\work\ai\builder_tools` only (for example Visual Studio Build Tools).
+3. Prefer pointing Electron / electron-builder caches at `../depends` via
+   `ELECTRON_CACHE` and `ELECTRON_BUILDER_CACHE`.
+4. If native rebuild is skipped for missing C++ tools, install Build Tools into
+   `D:\work\ai\builder_tools`, or accept N-API prebuilds. Unsigned installers can
+   use `electron-builder` with `signAndEditExecutable=false` when symlink/signing
+   permissions block `winCodeSign`.
+
 For desktop-specific details, see [`packages/electron/README.md`](./packages/electron/README.md).
 
 ### Shared UI (`packages/ui`)
@@ -65,8 +80,15 @@ bun run lint:ui
 Build Windows installers on a Windows host:
 
 ```bash
+# Optional: pin caches to ../depends
+set ELECTRON_CACHE=D:\work\ai\openchamber\depends\electron
+set ELECTRON_BUILDER_CACHE=D:\work\ai\openchamber\depends\electron-builder
+
 bun run electron:build
 ```
+
+Installer signing (CSC / certificate) is optional and only required for
+external distribution. Local unsigned NSIS builds are expected for development.
 
 ## Before Submitting
 

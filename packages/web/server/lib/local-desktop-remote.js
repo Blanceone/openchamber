@@ -63,6 +63,12 @@ export const createDisabledManagedTunnelConfigRuntime = () => ({
   resolveManagedRemoteTunnelToken: async () => null,
 });
 
+export const createDisabledApnsRuntime = () => ({
+  addOrUpdateApnsToken: async () => ({ ok: false, disabled: true }),
+  removeApnsToken: async () => ({ ok: false, disabled: true }),
+  sendApnsToAllUiSessions: async () => ({ sent: 0, disabled: true }),
+});
+
 export const respondRemoteDisabled = (res) => {
   res.setHeader('Cache-Control', 'no-store');
   return res.status(410).json({

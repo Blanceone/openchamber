@@ -15,14 +15,12 @@ vi.mock('@openchamber/ui/lib/runtime-switch', () => ({
   initializeRuntimeEndpoint: vi.fn(),
   switchRuntimeEndpoint: vi.fn(),
 }));
-vi.mock('@openchamber/ui/lib/desktopRelayRestore', () => ({ restoreDesktopRelayRuntime: vi.fn(() => Promise.resolve()) }));
 vi.mock('@openchamber/ui/lib/runtime-url', () => ({ configureRuntimeUrlResolver: vi.fn(() => ({})) }));
 vi.mock('@openchamber/ui/lib/opencode/client', () => ({ opencodeClient: { reconnectToRuntimeBaseUrl: vi.fn() } }));
 vi.mock('./api', () => ({ createWebAPIs: vi.fn() }));
 
 import { setRuntimeBearerToken, setRuntimeExtraHeaders } from '@openchamber/ui/lib/runtime-auth';
-import { initializeRuntimeEndpoint, switchRuntimeEndpoint } from '@openchamber/ui/lib/runtime-switch';
-import { restoreDesktopRelayRuntime } from '@openchamber/ui/lib/desktopRelayRestore';
+import { initializeRuntimeEndpoint } from '@openchamber/ui/lib/runtime-switch';
 import { opencodeClient } from '@openchamber/ui/lib/opencode/client';
 import { createConfiguredWebAPIs, readRuntimeBootstrapConfig } from './runtimeConfig';
 
@@ -63,7 +61,6 @@ describe('readRuntimeBootstrapConfig', () => {
     current.__OPENCHAMBER_CLIENT_TOKEN__ = ' remote-token ';
     current.__OPENCHAMBER_LOCAL_ORIGIN__ = ' http://127.0.0.1:3000 ';
     current.__OPENCHAMBER_RUNTIME_HEADERS__ = { 'x-openchamber-relay': 'relay-value' };
-    current.__OPENCHAMBER_RELAY_HOST_ID__ = ' remote-host ';
     installWindow(current);
 
     expect(readRuntimeBootstrapConfig()).toEqual({
@@ -71,7 +68,6 @@ describe('readRuntimeBootstrapConfig', () => {
       clientToken: 'remote-token',
       localOrigin: 'http://127.0.0.1:3000',
       runtimeHeaders: { 'x-openchamber-relay': 'relay-value' },
-      relayHostId: 'remote-host',
     });
   });
 
@@ -88,20 +84,17 @@ describe('readRuntimeBootstrapConfig', () => {
       clientToken: '',
       localOrigin: '',
       runtimeHeaders: undefined,
-      relayHostId: '',
     });
   });
-
 });
 
 describe('createConfiguredWebAPIs', () => {
-  test('applies an embedded handshake before restoring its relay host', () => {
+  test('applies an embedded handshake without relay restore', () => {
     const bootstrap = {
       apiBaseUrl: 'https://remote.example.com',
       clientToken: 'client-token',
       localOrigin: 'openchamber-ui://app',
       runtimeHeaders: { 'x-runtime': 'value' },
-      relayHostId: 'host-1',
     };
 
     createConfiguredWebAPIs(bootstrap);
@@ -112,34 +105,6 @@ describe('createConfiguredWebAPIs', () => {
     });
     expect(setRuntimeBearerToken).toHaveBeenCalledWith(bootstrap.clientToken);
     expect(setRuntimeExtraHeaders).toHaveBeenCalledWith(bootstrap.runtimeHeaders);
-    expect(restoreDesktopRelayRuntime).toHaveBeenCalledWith(bootstrap.relayHostId);
-    expect(opencodeClient.reconnectToRuntimeBaseUrl).toHaveBeenCalled();
-  });
-
-  test('activates an embedded relay without relying on Electron preload IPC', () => {
-    const relay = {
-      relayUrl: 'wss://relay.example.com',
-      serverId: 'server-1',
-      hostEncPubJwk: { kty: 'EC', crv: 'P-256', x: 'public-x', y: 'public-y' },
-    };
-    const bootstrap = {
-      apiBaseUrl: 'openchamber-ui://app',
-      clientToken: 'client-token',
-      localOrigin: 'http://127.0.0.1:3000',
-      relayHostId: 'host-1',
-      relay,
-    };
-
-    createConfiguredWebAPIs(bootstrap);
-
-    expect(switchRuntimeEndpoint).toHaveBeenCalledWith({
-      apiBaseUrl: bootstrap.apiBaseUrl,
-      clientToken: bootstrap.clientToken,
-      requestHeaders: null,
-      runtimeKey: 'host:host-1',
-      relay,
-    });
-    expect(restoreDesktopRelayRuntime).not.toHaveBeenCalled();
     expect(opencodeClient.reconnectToRuntimeBaseUrl).toHaveBeenCalled();
   });
 });

@@ -251,12 +251,6 @@ describe('embedded runtime bootstrap handshake', () => {
                 clientToken: 'client-token',
                 localOrigin: 'openchamber-ui://app',
                 runtimeHeaders: { 'x-runtime': 'value' },
-                relayHostId: 'host-1',
-                relay: {
-                  relayUrl: 'wss://relay.example.com',
-                  serverId: 'server-1',
-                  hostEncPubJwk: { kty: 'EC', crv: 'P-256', x: 'public-x', y: 'public-y' },
-                },
               },
             },
           } as unknown as MessageEvent);
@@ -292,12 +286,6 @@ describe('embedded runtime bootstrap handshake', () => {
       clientToken: 'client-token',
       localOrigin: 'openchamber-ui://app',
       runtimeHeaders: { 'x-runtime': 'value' },
-      relayHostId: 'host-1',
-      relay: {
-        relayUrl: 'wss://relay.example.com',
-        serverId: 'server-1',
-        hostEncPubJwk: { kty: 'EC', crv: 'P-256', x: 'public-x', y: 'public-y' },
-      },
     });
     expect(requestCount).toBe(2);
     expect(retryCleared).toBe(true);

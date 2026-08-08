@@ -1,5 +1,4 @@
 import type { Theme } from '@/types/theme';
-import type { RelayRuntimeDescriptor } from '@/lib/runtime-transport/runtime-tunnel';
 
 export type EmbeddedSessionChatThemeBootstrap = {
   mode: 'light' | 'dark' | 'system';
@@ -18,8 +17,6 @@ export type EmbeddedSessionRuntimeBootstrap = {
   clientToken: string;
   localOrigin: string;
   runtimeHeaders?: Record<string, string>;
-  relayHostId: string;
-  relay?: Omit<RelayRuntimeDescriptor, 'grant'>;
 };
 
 export const EMBEDDED_RUNTIME_BOOTSTRAP_REQUEST = 'openchamber:embedded-runtime-bootstrap-request';
@@ -42,7 +39,6 @@ const isRuntimeBootstrap = (value: unknown): value is EmbeddedSessionRuntimeBoot
     typeof candidate.apiBaseUrl !== 'string'
     || typeof candidate.clientToken !== 'string'
     || typeof candidate.localOrigin !== 'string'
-    || typeof candidate.relayHostId !== 'string'
   ) {
     return false;
   }
@@ -50,17 +46,7 @@ const isRuntimeBootstrap = (value: unknown): value is EmbeddedSessionRuntimeBoot
     return false;
   }
 
-  const relay = candidate.relay;
-  if (relay === undefined) return true;
-
-  return relay !== null
-    && typeof relay === 'object'
-    && !('grant' in relay)
-    && typeof relay.relayUrl === 'string'
-    && typeof relay.serverId === 'string'
-    && relay.hostEncPubJwk !== null
-    && typeof relay.hostEncPubJwk === 'object'
-    && !Array.isArray(relay.hostEncPubJwk);
+  return true;
 };
 
 export const requestEmbeddedSessionRuntimeBootstrap = (): Promise<EmbeddedSessionRuntimeBootstrap | null> => {

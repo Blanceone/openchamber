@@ -31,8 +31,7 @@ import { toast } from '@/components/ui';
 import { runtimeFetch } from '@/lib/runtime-fetch';
 import { getRuntimeBearerTokenSync, getRuntimeExtraHeadersSync, refreshRuntimeUrlAuthToken } from '@/lib/runtime-auth';
 import { getRuntimeUrlResolver } from '@/lib/runtime-url';
-import { getRuntimeApiBaseUrl, getRuntimeKey } from '@/lib/runtime-switch';
-import { getActiveRelayDescriptor } from '@/lib/runtime-transport/runtime-tunnel';
+import { getRuntimeApiBaseUrl } from '@/lib/runtime-switch';
 import { getPreviewTargetRecoveryAction } from '@/lib/preview/proxy-response';
 import { Icon } from "@/components/icon/Icon";
 import { OpenChamberLogo } from "@/components/ui/OpenChamberLogo";
@@ -2615,7 +2614,6 @@ export const ContextPanel: React.FC = () => {
       const data = event.data as { type?: unknown; requestId?: unknown };
       if (data?.type === EMBEDDED_RUNTIME_BOOTSTRAP_REQUEST) {
         if (typeof data.requestId !== 'string' || !data.requestId) return;
-        const runtimeKey = getRuntimeKey();
         const payload: EmbeddedSessionRuntimeBootstrap = {
           apiBaseUrl: getRuntimeApiBaseUrl(),
           clientToken: getRuntimeBearerTokenSync(),
@@ -2623,8 +2621,6 @@ export const ContextPanel: React.FC = () => {
             ? window.__OPENCHAMBER_LOCAL_ORIGIN__
             : '',
           runtimeHeaders: getRuntimeExtraHeadersSync(),
-          relayHostId: runtimeKey.startsWith('host:') ? runtimeKey.slice('host:'.length) : '',
-          relay: getActiveRelayDescriptor() ?? undefined,
         };
         (event.source as WindowProxy | null)?.postMessage({
           type: EMBEDDED_RUNTIME_BOOTSTRAP_RESPONSE,

@@ -1,17 +1,20 @@
 OpenChamber 本机桌面裁剪 — 工作进展与后续事项
 ============================================
-日期：2026-08-06
+日期：2026-08-08（续：阶段 G）
 分支：dev
 远程：origin = https://github.com/Blanceone/openchamber.git
 上游：upstream = https://github.com/openchamber/openchamber.git
-最近提交范围：阶段 C–F（相对 83ec399d；阶段 F 为 OpenCode 冒烟工作日志）
-本机已有安装包产物（2026-08-05，非本次重建）：packages/electron/dist/OpenChamber-1.18.1-win-x64.exe
+最近完成：阶段 A–F 已入库；阶段 G 为本机工作区完成项（含 electron:build 复核）
+本机安装包产物（本次重建，未签名）：
+  packages/electron/dist/OpenChamber-1.18.1-win-x64.exe（约 158.5 MB，2026-08-08）
 
 路径约束（必须遵守）
 --------------------
 1. 依赖库 / 下载缓存 / 安装包缓存：只允许放到 D:\work\ai\openchamber\depends（相对仓库 ../depends）
 2. 编译工具链 / SDK / native build helpers：只允许放到或安装在 D:\work\ai\builder_tools
-   （已写入 .cursor/rules/local-windows-paths.mdc 与 AGENTS.md）
+   （已写入 .cursor/rules/local-windows-paths.mdc、AGENTS.md、CONTRIBUTING.md）
+3. 例外（Microsoft 强制路径）：Windows Kits 头文件/库仍安装到
+   C:\Program Files (x86)\Windows Kits\10（VS Build Tools 本身在 builder_tools\vs2022）
 
 一、产品目标（已确认）
 --------------------
@@ -30,80 +33,80 @@ OpenChamber 本机桌面裁剪 — 工作进展与后续事项
 - Settings/Header/深链去掉 Remote/Tunnel/SSH 主机切换
 - CLI tunnel / connect-url 入口禁用；保留 Settings → Git / GitHub
 
-【阶段 C】关闭服务端远程攻击面 + 文案清理
+【阶段 C】关闭服务端远程攻击面 + 文案清理（已入库：c0e88555）
 - local-desktop-remote.js：pairing/connect/APNs → 410；disabled tunnel/relay stubs
 - Electron 强制 loopback，忽略 desktopLanAccessEnabled
 - CLI 帮助去掉 tunnel/connect-url/LAN/relay 广告
 - 各 locale 删除 remoteInstances/tunnel 孤儿 i18n 键（约 3685 条）
 - DesktopNetworkSettings 评估：暂不新增独立锁屏密码 UI；settings/env 仍可选用
 
-【阶段 D】runtime-transport 迁移
-- 新增 packages/ui/src/lib/runtime-transport/（socket / WS wrapper / transport-error / relay stub）
+【阶段 D】runtime-transport 迁移（已入库：c0e88555）
+- 新增 packages/ui/src/lib/runtime-transport/
 - 删除 packages/ui/src/lib/relay/** 私有加密与隧道客户端
-- 生产调用点改指向 runtime-transport
 
-【阶段 E】死分支卸载 + boot 瘦身 + 冒烟
-- runtime-fetch / runtime-auth：去掉私有 relay 分支（始终直连）
-- boot：pairing + managed-tunnel 用 disabled stubs；显式挂载 tunnel/relay 410（避免落入 OpenCode 代理超时）
-- CLI：不再 import commands-tunnel / cli-tunnel-profiles；capabilities 改为静态常量
-- 删除 .agents/skills/serve-sim 墓碑技能
+【阶段 E】死分支卸载 + boot 瘦身（已入库：c0e88555）
+- runtime-fetch / runtime-auth：去掉私有 relay 分支
+- boot：pairing + managed-tunnel 用 disabled stubs；显式挂载 tunnel/relay 410
+- CLI：capabilities 静态常量；不再激活 tunnel 实现
 
-【阶段 F】OpenCode CLI 安装 + 会话/终端/Git 冒烟（本机，2026-08-06）
-- 安装 pinned OpenCode CLI 1.18.12 → D:\work\ai\openchamber\depends\opencode-cli\bin\opencode.exe
-  （归档缓存同目录树 1.18.12\win32-x64\；由既有 packages/electron/.cache 拷贝，未再下载到仓库内）
-- electron:dev 需将 bun.exe 目录加入 PATH（仅 bun.cmd/ps1 时 HMR 子进程 spawn bun ENOENT）
-- 启动时设置 OPENCODE_BINARY / OPENCHAMBER_BUNDLED_OPENCODE_CLI_DIR 指向上述 bin
-- 注意：Windows 下 packages/web 的 nodemon exec 字面量 `${OPENCHAMBER_PORT:-3001}` 未展开，
-  HMR API 落在 3000 而非 3901；Electron 探测 HMR API 失败后回退进程内 127.0.0.1:57123（冒烟以此为准）
-- 冒烟结束后已 taskkill 清理 electron/opencode/vite/nodemon 进程树
+【阶段 F】OpenCode CLI 安装 + 会话/终端/Git 冒烟（已入库：f2d60695 工作日志）
+- OpenCode CLI 1.18.12 + electron:dev API 冒烟（会话/终端/Git；远程 API 410）
+
+【阶段 G】物理删除远程实现 + 工具链 + electron:build（本机 2026-08-08）
+代码清理：
+- 删除 CLI：commands-tunnel.js、commands-connect-url.js、cli-tunnel-profiles.js、cli-tunnel-utils.js
+- 删除 server tunnels 实现（保留 types.js + types.test.js + DOCUMENTATION.md）
+- 删除 server relay 实现与 APNs runtime（保留 DOCUMENTATION.md；boot 用 createDisabledApnsRuntime）
+- Capacitor 死分支清理；isVSCodeRuntime() 恒 false；runtimeConfig 去掉 desktopRelayRestore
+- Windows HMR：packages/web/scripts/run-dev-server.mjs 正确展开 OPENCHAMBER_PORT
+- CONTRIBUTING / electron README：路径约束与打包注意点
+- Settings：SettingsPageSlug 无 remote/tunnel（代码确认；GUI 点击路径仍未做）
+- package.mjs：改用工作区 electron-builder/cli.js（避免 bun x 丢 app-builder-bin）
+- prepare-opencode-cli：优先 ../depends/opencode-cli；Windows curl --ssl-no-revoke
+
+工具链 / 缓存（本机）：
+- VS Build Tools → D:\work\ai\builder_tools\vs2022
+  （Workload.VCTools + Windows11SDK.22621 + VC.Runtimes.*.Spectre）
+- OpenCode CLI zip → D:\work\ai\openchamber\depends\opencode-cli\1.18.12\...
+- Electron / electron-builder 缓存 → ../depends/electron、../depends/electron-builder
+- VS bootstrapper → ../depends/vs-buildtools\vs_BuildTools.exe
 
 三、验证
 --------
 已跑：
-- bun test：local-desktop-remote、runtime-switch、runtime-fetch、runtime-auth — 通过
-- bun test cli：fallback capabilities + tunnel disabled — 通过
-- node --check：server/index.js、cli.js、local-desktop-remote.js
-- electron:dev + OpenCode 完整 API 冒烟（对 127.0.0.1:57123）：
-  - /health、/api/system/info → 200；runtime=desktop
-  - /api/opencode/health → {"healthy":true}；/api/opencode/version → 1.18.12
-  - /api/config/opencode-resolution → source=env，resolved=depends\opencode-cli\bin\opencode.exe
-  - 会话：POST/GET /api/session（含 directory=本仓库）创建/列出成功
-  - 终端：GET /api/terminal/shells；POST /api/terminal/create → running；DELETE → success
-  - Git：/api/git/check、status、toplevel、remote-url、diff?path=… → 可用
-  - 远程面：/connect、/api/client-auth/status、/api/push/apns-token、/api/openchamber/tunnel/status → 410
-  - 冒烟结束后残留进程已清理
+- bun test：local-desktop-remote、runtime-fetch、runtime-auth — 38 pass
+- bun test：tunnels/types.test.js — 4 pass
+- bun run dead-code（非阻塞报告；无阶段 G 新增阻断项）
+- node --check：package.mjs、prepare-opencode-cli.mjs
+- electron:build 完整链：web assets → prepare OpenCode CLI → bundle main →
+  rebuild native（node-pty）→ NSIS 未签名安装包 — 成功
+  产物：packages/electron/dist/OpenChamber-1.18.1-win-x64.exe
+        packages/electron/dist/win-unpacked/
+        packages/electron/dist/latest.yml
 
 未跑 / 未证明：
-- 完整 GUI 点击路径（Settings 页目视确认无 Remote/Tunnel；仅 API/启动日志证据）
-- 在 builder_tools 工具链下重新跑通 electron:build（dist 里已有 08-05 产物，需复核/重建）
-
-产物位置（electron:build）：
-- 安装包 / win-unpacked / latest.yml → packages/electron/dist/
-- 中间态：resources/web-dist、dist-bundle/main.mjs、resources/opencode-cli/
-- 开发用 OpenCode CLI（非安装包）：D:\work\ai\openchamber\depends\opencode-cli\bin\
+- Settings GUI 目视点击确认（代码已无 Remote/Tunnel slug）
+- 安装包代码签名（无 CSC；刻意未做）
+- 安装包首次安装后的完整 GUI 冒烟（可用既有阶段 F API 冒烟作间接证据）
 
 四、刻意未做 / 后续
 ------------------
-优先级高：
-1. ~~安装 OpenCode CLI 后完整会话/终端/Git 冒烟~~（已完成，见阶段 F；本提交仅更新工作日志）
-2. 具备 VS Build Tools（装于 D:\work\ai\builder_tools）时跑 / 复核 electron:build
-3. 物理删除 tunnels 实现目录（保留 settings 仍用的 types）与大部分 relay/**（保留 signing-key 直至 APNs 彻底去掉）
+优先级高：无阻塞项（阶段 G 计划项已完成）
 
 优先级中：
-4. 删除 commands-tunnel.js / commands-connect-url.js / cli-tunnel-profiles.js 等实现文件
-5. VS Code / Capacitor 运行时分支大扫除
-6. 评估独立「应用锁屏密码」设置（不绑定 LAN）
-6b. Windows HMR：修复 dev:server:watch 的 OPENCHAMBER_PORT 展开，避免 API 落错端口
+1. Settings GUI 目视确认无 Remote / Tunnel 入口
+2. 可选：安装包首次启动 GUI 冒烟
 
 优先级低：
-7. CONTRIBUTING 写入 Windows 打包注意点与 depends/builder_tools 路径约束
-8. 安装包签名（若外部分发需要）
+3. 安装包签名（若外部分发需要 CSC）
+4. 若上游修复 Windows ARM64 OpenCode CLI，去掉 prepare-opencode-cli 的 x64-baseline 临时方案
 
 五、冒烟清单
 ------------
-[x] electron:dev 能启动（本机服务 57123；OpenCode 1.18.12 managed）
-[x] Git API 可用；会话 create/list 正常；终端 create/delete 可用（API 冒烟）
-[x] CLI tunnel/connect-url → disabled（测试覆盖）
+[x] electron:dev 能启动（阶段 F）
+[x] Git API 可用；会话 create/list 正常；终端 create/delete 可用（阶段 F）
+[x] CLI tunnel/connect-url → disabled
 [x] 远程 API → client-auth/connect/apns/tunnel 410
-[ ] Settings GUI 目视确认无 Remote / Tunnel 入口（未做点击路径）
-[ ] electron:build 安装包
+[x] Settings 代码确认无 Remote / Tunnel 页 slug
+[ ] Settings GUI 目视确认（未做点击路径）
+[x] electron:build 安装包（2026-08-08 未签名重建成功）

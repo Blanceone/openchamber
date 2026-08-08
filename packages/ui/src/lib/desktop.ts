@@ -545,8 +545,9 @@ export const startDesktopWindowDrag = async (): Promise<boolean> => {
 };
 
 export const isVSCodeRuntime = (): boolean => {
-  const apis = getRegisteredRuntimeAPIs();
-  return apis?.runtime?.isVSCode === true;
+  // This monorepo ships Windows Electron desktop only. VS Code product surface
+  // was removed; keep the helper as a permanent false so call sites stay safe.
+  return false;
 };
 
 export const isWebRuntime = (): boolean => {
@@ -555,11 +556,11 @@ export const isWebRuntime = (): boolean => {
   if (platform === 'web') {
     return true;
   }
-  if (platform === 'desktop' || platform === 'vscode') {
+  if (platform === 'desktop') {
     return false;
   }
-  // Default: anything that's not VSCode behaves like web (HTTP UI).
-  return !isVSCodeRuntime();
+  // Default: HTTP UI when not running inside the desktop shell.
+  return !isDesktopShell();
 };
 
 /**

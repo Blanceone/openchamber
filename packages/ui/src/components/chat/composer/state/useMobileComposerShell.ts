@@ -18,8 +18,6 @@
 import React from 'react';
 import { flushSync } from 'react-dom';
 
-import { observeEditorFocus } from '@/lib/hardwareKeyboard';
-import { isCapacitorApp } from '@/lib/platform';
 import type { ComposerEditorHandle } from '../editor/ComposerEditor';
 
 /**
@@ -128,30 +126,9 @@ export function useMobileComposerShell(
         expandIntentRef.current = 'focus';
         // flushSync so the editor exists NOW and focus() still runs inside the
         // gesture's call stack: mobile browsers only open the soft keyboard for
-        // focus calls made synchronously from the tap (an rAF here worked in
-        // the Capacitor WebView but not in Safari or Chrome).
+        // focus calls made synchronously from the tap (an rAF here fails in
+        // Safari and Chrome).
         flushSync(() => setExpanded(true));
-
-        if (isCapacitorApp()) {
-            // Timing tuned on device, against WKWebView pausing frame
-            // presentation while the keyboard transition runs:
-            //  - focus in the same task as the swap → the pause starts before
-            //    the swap's first frame, so the pill stays on glass until the
-            //    keyboard is nearly up;
-            //  - focus two frames later → the swap is presented first and the
-            //    keyboard only then begins, a visibly sequential two-step.
-            // Focusing INSIDE the first frame after the commit threads the
-            // needle: the swap's frame is already in the rendering pipeline
-            // when the keyboard transaction starts, so the keyboard rises from
-            // the tap and the composer appears during the rise. The Capacitor
-            // WebView raises the keyboard for a focus() outside the gesture
-            // task (browsers do not, hence the split); the choreography
-            // positions everything, so preventScroll stays on.
-            requestAnimationFrame(() => {
-                editorRef.current?.focus({ preventScroll: true });
-            });
-            return;
-        }
 
         // Mobile browsers only open the soft keyboard for focus calls made
         // synchronously from the tap; their native reveal is also the only
@@ -218,7 +195,7 @@ export function useMobileComposerShell(
     const holdFocusUntilRef = React.useRef(0);
 
     React.useEffect(() => {
-        if (!isMobile || isCapacitorApp() || typeof window === 'undefined') return;
+        if (!isMobile || typeof window === 'undefined') return;
         if (!window.matchMedia?.('(display-mode: standalone)')?.matches) return;
 
         const handleOverlayOpened = () => {
@@ -292,7 +269,7 @@ export function useMobileComposerShell(
         const timer = window.setTimeout(() => {
             restoreKeyboardRef.current = false;
             // Browsers need their native scroll-into-view (see expand).
-            editorRef.current?.focus({ preventScroll: isCapacitorApp() });
+            editorRef.current?.focus({ preventScroll: false });
         }, 180);
         return () => window.clearTimeout(timer);
     }, [editorRef, focused, isMobile, overlayOpen]);
@@ -326,12 +303,10 @@ export function useMobileComposerShell(
     const busyRef = React.useRef(false);
     busyRef.current = busy;
 
-    // Browser counterpart of Capacitor's oc-keyboard-open root class (which is
-    // driven by native keyboard events): the focused composer is the best
-    // keyboard proxy a browser has. CSS keyed on it hides the draft starters
-    // while typing, mirroring the native app.
+    // Focused composer is the best keyboard proxy a browser has. CSS keyed on
+    // oc-browser-keyboard-open hides the draft starters while typing.
     React.useEffect(() => {
-        if (!isMobile || isCapacitorApp() || typeof document === 'undefined') return;
+        if (!isMobile || typeof document === 'undefined') return;
         const root = document.documentElement;
         if (focused) {
             root.classList.add('oc-browser-keyboard-open');
@@ -354,13 +329,11 @@ export function useMobileComposerShell(
         return () => root.classList.remove('oc-browser-keyboard-open');
     }, [focused, isMobile]);
 
-    // Capacitor: collapse in the SAME frame the keyboard starts hiding. The
-    // hide choreography dispatches oc:keyboard-intent BEFORE restoring the
-    // shell layout and measuring the chat compensation; flushSync commits the
-    // pill swap first, so keyboard land and composer shrink are measured — and
-    // compensated — as one motion instead of a two-step staircase. The delayed
-    // effect above remains the fallback for non-Capacitor and for overlays
-    // closing without a keyboard transition.
+    // Instant collapse when a keyboard-hide intent is dispatched: flushSync
+    // commits the pill swap in the same frame so keyboard land and composer
+    // shrink are measured — and compensated — as one motion. The delayed
+    // effect above remains the fallback for overlays closing without a
+    // keyboard transition.
     React.useEffect(() => {
         if (!isMobile || typeof window === 'undefined') return;
         const handleIntent = (event: Event) => {
@@ -382,9 +355,6 @@ export function useMobileComposerShell(
 
     const onEditorFocus = React.useCallback(() => {
         if (!isMobile) return;
-        // Focus is the only moment a soft keyboard would be presented, so it is
-        // also the only moment its ABSENCE tells us a hardware one is attached.
-        if (isCapacitorApp()) observeEditorFocus();
         if (blurTimerRef.current !== null) {
             window.clearTimeout(blurTimerRef.current);
             blurTimerRef.current = null;
@@ -416,17 +386,7 @@ export function useMobileComposerShell(
 
         // Mobile browsers and installed PWAs share a blur race: the
         // keyboard-dismiss reflow moves composer buttons before the tap's
-        // synthesized click lands, so the click misses its target. Capacitor's
-        // WebView does not need the hold — but it DOES need the state committed
-        // synchronously: the oc:keyboard-intent collapse arrives a few
-        // milliseconds after this blur on a setTimeout(0), and React's own
-        // scheduling can lose that race, leaving busyRef stale — the intent
-        // handler then skips the instant collapse and the pill appears only
-        // via the 250ms fallback, well after the keyboard has gone.
-        if (isCapacitorApp()) {
-            flushSync(() => setFocused(false));
-            return;
-        }
+        // synthesized click lands, so the click misses its target.
         if (blurTimerRef.current !== null) window.clearTimeout(blurTimerRef.current);
         // 120ms outlives the tap's synthesized click (which lands within a few
         // ms of the blur) while keeping the composer's return visually tied to
