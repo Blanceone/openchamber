@@ -1,10 +1,10 @@
 OpenChamber 本机桌面裁剪 — 工作进展与后续事项
 ============================================
-日期：2026-08-08（续：阶段 G）
+日期：2026-08-08（续：阶段 G + H）
 分支：dev
 远程：origin = https://github.com/Blanceone/openchamber.git
 上游：upstream = https://github.com/openchamber/openchamber.git
-最近完成：阶段 A–F 已入库；阶段 G 为本机工作区完成项（含 electron:build 复核）
+最近提交：a9ed355a（阶段 G 远程实现删除与 Windows 打包加固）
 本机安装包产物（本次重建，未签名）：
   packages/electron/dist/OpenChamber-1.18.1-win-x64.exe（约 158.5 MB，2026-08-08）
 
@@ -60,7 +60,7 @@ OpenChamber 本机桌面裁剪 — 工作进展与后续事项
 - Capacitor 死分支清理；isVSCodeRuntime() 恒 false；runtimeConfig 去掉 desktopRelayRestore
 - Windows HMR：packages/web/scripts/run-dev-server.mjs 正确展开 OPENCHAMBER_PORT
 - CONTRIBUTING / electron README：路径约束与打包注意点
-- Settings：SettingsPageSlug 无 remote/tunnel（代码确认；GUI 点击路径仍未做）
+- Settings：SettingsPageSlug 无 remote/tunnel（代码确认；GUI 见阶段 H）
 - package.mjs：改用工作区 electron-builder/cli.js（避免 bun x 丢 app-builder-bin）
 - prepare-opencode-cli：优先 ../depends/opencode-cli；Windows curl --ssl-no-revoke
 
@@ -84,22 +84,35 @@ OpenChamber 本机桌面裁剪 — 工作进展与后续事项
         packages/electron/dist/win-unpacked/
         packages/electron/dist/latest.yml
 
-未跑 / 未证明：
-- Settings GUI 目视点击确认（代码已无 Remote/Tunnel slug）
-- 安装包代码签名（无 CSC；刻意未做）
-- 安装包首次安装后的完整 GUI 冒烟（可用既有阶段 F API 冒烟作间接证据）
+【阶段 H】中低优先级验证（2026-08-08）
+Settings GUI（打包 win-unpacked + CDP :9222）：
+- 打开设置后侧栏可见：通用 / 外观 / 聊天 / 通知 / 会话 / 快捷键 / 语音 / 用量 /
+  工作区 / 项目 / Git / 提供商 / 智能体 / 行为 / 命令 / MCP / Plugins / …
+- 无 Remote Instances / Tunnel / Private Relay / 远程实例 / 隧道设置
+- ?settings=git 可打开 Git 设置页；body 扫描无远程入口
+
+安装包首次启动冒烟（win-unpacked\OpenChamber.exe）：
+- /health → 200；runtime=desktop；OpenCode 1.18.12（bundled）
+- /api/git/check?directory=… → 200 isGitRepository=true
+- /api/client-auth/status、/connect、tunnel/status、POST /api/push/apns-token → 410
+- 冒烟后已结束 OpenChamber 进程
+
+安装包签名评估：
+- Authenticode Status=NotSigned
+- 环境无 CSC_LINK / WINDOWS_CSC_LINK / CSC_KEY_PASSWORD
+- 结论：保持未签名；外部分发前需提供代码签名证书后再启用
+
+Windows ARM64 OpenCode CLI 临时方案：
+- prepare-opencode-cli 仍对 win arm64 打包 x64-baseline（上游 Bun FFI 问题）
+- 结论：上游未修复前保持；修复后再去掉临时分支
 
 四、刻意未做 / 后续
 ------------------
-优先级高：无阻塞项（阶段 G 计划项已完成）
+优先级高 / 中：无阻塞项（阶段 G–H 计划项已完成）
 
-优先级中：
-1. Settings GUI 目视确认无 Remote / Tunnel 入口
-2. 可选：安装包首次启动 GUI 冒烟
-
-优先级低：
-3. 安装包签名（若外部分发需要 CSC）
-4. 若上游修复 Windows ARM64 OpenCode CLI，去掉 prepare-opencode-cli 的 x64-baseline 临时方案
+优先级低（需外部条件）：
+1. 安装包签名（需 CSC 证书与密码）
+2. 上游修复 Windows ARM64 OpenCode CLI 后，去掉 x64-baseline 临时方案
 
 五、冒烟清单
 ------------
@@ -108,5 +121,6 @@ OpenChamber 本机桌面裁剪 — 工作进展与后续事项
 [x] CLI tunnel/connect-url → disabled
 [x] 远程 API → client-auth/connect/apns/tunnel 410
 [x] Settings 代码确认无 Remote / Tunnel 页 slug
-[ ] Settings GUI 目视确认（未做点击路径）
+[x] Settings GUI 确认无 Remote / Tunnel（打包应用 CDP，2026-08-08）
 [x] electron:build 安装包（2026-08-08 未签名重建成功）
+[x] 安装包首次启动冒烟（health / OpenCode / Git / 远程 410）
