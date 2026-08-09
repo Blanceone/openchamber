@@ -135,6 +135,10 @@ export type DesktopSettings = {
   // small model is often deliberately not chosen for. Unset means "use the
   // small model"; a value replaces it for this feature only.
   walkthroughModelOverride?: string; // format: "provider/model"
+  openWikiEnabled?: boolean;
+  openWikiLanguage?: string;
+  openWikiModelOverride?: string; // format: "provider/model"
+  openWikiAutoReveal?: boolean;
   defaultGitIdentityId?: string; // ''/undefined = unset, 'global' or profile id
   openInAppId?: string;
   autoCreateWorktree?: boolean;

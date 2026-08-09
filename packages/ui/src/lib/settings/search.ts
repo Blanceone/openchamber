@@ -20,13 +20,13 @@ export interface SettingsSearchResult extends SettingsSearchItem {
 interface SettingsSearchAvailabilityContext extends SettingsRuntimeContext {
   isMobile: boolean;
   isDesktopLocalOrigin: boolean;
-  // macOS desktop shell — for controls that only render on darwin (e.g. dock badge).
+  // macOS desktop shell �?for controls that only render on darwin (e.g. dock badge).
   isMac: boolean;
-  // Windows desktop shell — for controls that only render on win32.
+  // Windows desktop shell �?for controls that only render on win32.
   isWindows: boolean;
-  // Linux desktop shell — for controls that only render on linux.
+  // Linux desktop shell �?for controls that only render on linux.
   isLinux: boolean;
-  // Windows ARM64 — temporary workaround gate (see opencode#19130).
+  // Windows ARM64 �?temporary workaround gate (see opencode#19130).
   isWindowsArm64: boolean;
 }
 
@@ -714,6 +714,53 @@ const SETTINGS_SEARCH_ITEMS: readonly SettingsSearchItem[] = [
     page: 'snippets',
     titleKey: 'settings.snippets.page.field.content',
     keywords: ['markdown', 'prompt', 'template'],
+  },
+  {
+    id: 'openwiki.enabled',
+    page: 'openwiki',
+    titleKey: 'settings.openwiki.enabled.label',
+    descriptionKey: 'settings.openwiki.enabled.info',
+    keywords: ['wiki', 'openwiki'],
+  },
+  {
+    id: 'openwiki.auto-reveal',
+    page: 'openwiki',
+    titleKey: 'settings.openwiki.autoReveal.label',
+    descriptionKey: 'settings.openwiki.autoReveal.info',
+    keywords: ['wiki', 'auto open', 'reveal'],
+  },
+  {
+    id: 'openwiki.language',
+    page: 'openwiki',
+    titleKey: 'settings.openwiki.language.label',
+    descriptionKey: 'settings.openwiki.language.info',
+    keywords: ['wiki language', 'locale'],
+  },
+  {
+    id: 'openwiki.model',
+    page: 'openwiki',
+    titleKey: 'settings.openwiki.model.label',
+    descriptionKey: 'settings.openwiki.model.info',
+    keywords: ['wiki model', 'openwiki model'],
+  },
+  {
+    id: 'openwiki.format-preset',
+    page: 'openwiki',
+    titleKey: 'settings.openwiki.preset.label',
+    descriptionKey: 'settings.openwiki.preset.info',
+    keywords: ['wiki format', 'documentation structure'],
+  },
+  {
+    id: 'openwiki.brief',
+    page: 'openwiki',
+    titleKey: 'settings.openwiki.brief.label',
+    keywords: ['instructions', 'brief'],
+  },
+  {
+    id: 'openwiki.format',
+    page: 'openwiki',
+    titleKey: 'settings.openwiki.format.label',
+    keywords: ['format', 'structure'],
   },
   {
     id: 'providers.connect',

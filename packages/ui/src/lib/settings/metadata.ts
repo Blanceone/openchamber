@@ -20,6 +20,7 @@ export type SettingsPageSlug =
   | 'sessions'
   | 'magic-prompts'
   | 'snippets'
+  | 'openwiki'
   | 'notifications'
   | 'voice'
   | 'about';
@@ -184,6 +185,13 @@ export const SETTINGS_PAGE_METADATA: readonly SettingsPageMeta[] = [
     group: 'content',
     kind: 'split',
     keywords: ['prompt', 'templates', 'multi-run', 'strategy', 'approach'],
+  },
+  {
+    slug: 'openwiki',
+    title: 'OpenWiki',
+    group: 'content',
+    kind: 'single',
+    keywords: ['wiki', 'openwiki', 'docs', 'documentation', 'architecture', 'format'],
   },
 
   { slug: 'notifications', title: 'Notifications', group: 'general', kind: 'single', keywords: ['alerts', 'native', 'summary', 'summarization'], },

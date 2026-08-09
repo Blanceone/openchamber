@@ -8,6 +8,7 @@ export type ContextSurfaceId =
   | 'pr'
   | 'diff'
   | 'walkthrough'
+  | 'wiki'
   | 'terminal'
   | 'plan'
   | 'notes'
@@ -82,6 +83,15 @@ export const CONTEXT_SURFACES: readonly ContextSurfaceDescriptor[] = [
     mode: 'walkthrough',
     icon: 'route',
     labelKey: 'contextPanel.mode.walkthrough',
+    availability: 'always',
+  },
+  {
+    id: 'wiki',
+    descriptionKey: 'contextRail.surface.wiki.description',
+    defaultWidthFraction: 3 / 5,
+    mode: 'wiki',
+    icon: 'book-open',
+    labelKey: 'contextPanel.mode.wiki',
     availability: 'always',
   },
   {
@@ -195,6 +205,7 @@ export const sortContextSurfaces = (railOrder: readonly string[]): ContextSurfac
 type VisibleRailSurfacesOptions = {
   railOrder: readonly string[];
   planModeEnabled: boolean;
+  openWikiEnabled?: boolean;
   isVSCode: boolean;
   screenWidth: number;
   tabs: readonly { mode: ContextPanelMode }[];
@@ -216,6 +227,9 @@ export const getVisibleContextRailSurfaces = (options: VisibleRailSurfacesOption
     // The walkthrough needs room for a stop list beside real code, and its
     // diffs come from OpenChamber's Git routes, which VS Code does not serve.
     if (surface.id === 'walkthrough' && (options.isVSCode || options.screenWidth < WALKTHROUGH_MIN_WIDTH)) {
+      return false;
+    }
+    if (surface.id === 'wiki' && options.openWikiEnabled === false) {
       return false;
     }
     if (surface.availability === 'has-content') {

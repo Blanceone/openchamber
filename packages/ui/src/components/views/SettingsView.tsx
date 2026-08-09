@@ -32,6 +32,7 @@ import { MagicPromptsSidebar } from '@/components/sections/magic-prompts/MagicPr
 import { MagicPromptsPage } from '@/components/sections/magic-prompts/MagicPromptsPage';
 import { SnippetsSidebar } from '@/components/sections/snippets/SnippetsSidebar';
 import { SnippetsPage } from '@/components/sections/snippets/SnippetsPage';
+import { OpenWikiPage } from '@/components/sections/OpenWikiPage';
 import { GitPage } from '@/components/sections/git-identities/GitPage';
 import type { OpenChamberSection } from '@/components/sections/openchamber/types';
 import { OpenChamberPage } from '@/components/sections/openchamber/OpenChamberPage';
@@ -104,6 +105,7 @@ const pageOrder: SettingsPageSlug[] = [
   // 'content' group — Library
   'magic-prompts',
   'snippets',
+  'openwiki',
   'skills.installed',
   'skills.catalog',
 ];
@@ -183,6 +185,8 @@ export function getSettingsNavIcon(slug: SettingsPageSlug): IconName | null {
       return 'ai-generate-2';
     case 'snippets':
       return SNIPPETS_SETTINGS_ICON.icon;
+    case 'openwiki':
+      return 'book-open';
     case 'notifications':
       return 'notification-3';
     case 'shortcuts':
@@ -400,6 +404,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
         return t('settings.page.magicPrompts.title');
       case 'snippets':
         return t('settings.page.snippets.title');
+      case 'openwiki':
+        return t('settings.page.openwiki.title');
       case 'notifications':
         return t('settings.page.notifications.title');
       case 'voice':
@@ -685,6 +691,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onClose, forceMobile
         return <MagicPromptsPage />;
       case 'snippets':
         return <SnippetsPage />;
+      case 'openwiki':
+        return <OpenWikiPage />;
       case 'git':
         return <GitPage />;
       case 'general':

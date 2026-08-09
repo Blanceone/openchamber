@@ -10,6 +10,7 @@ import { GitView } from '@/components/views/GitView';
 import { PullRequestView } from '@/components/views/PullRequestView';
 import { TerminalView } from '@/components/views/TerminalView';
 import { WalkthroughView } from '@/components/views/walkthrough/WalkthroughView';
+import { OpenWikiView } from '@/components/views/OpenWikiView';
 import { PlanView } from '@/components/views/PlanView';
 import { ProjectContextPanel } from './RightSidebarTabs';
 import { SidebarFilesTree } from './SidebarFilesTree';
@@ -160,6 +161,7 @@ const getModeLabel = (
   if (mode === 'file') return t('contextPanel.mode.files');
   if (mode === 'diff') return t('contextPanel.mode.diff');
   if (mode === 'walkthrough') return t('contextPanel.mode.walkthrough');
+  if (mode === 'wiki') return t('contextPanel.mode.wiki');
   if (mode === 'plan') return t('contextPanel.mode.plan');
   if (mode === 'preview') return t('contextPanel.mode.preview');
   if (mode === 'browser') return t('contextPanel.mode.browser');
@@ -251,6 +253,10 @@ const getTabIcon = (tab: { mode: ContextPanelMode; targetPath: string | null }):
 
   if (tab.mode === 'walkthrough') {
     return <Icon name="route" className="h-3.5 w-3.5" />;
+  }
+
+  if (tab.mode === 'wiki') {
+    return <Icon name="book-open" className="h-3.5 w-3.5" />;
   }
 
   if (tab.mode === 'git') {
@@ -2726,6 +2732,10 @@ export const ContextPanel: React.FC = () => {
     () => tabs.some((tab) => tab.mode === 'walkthrough'),
     [tabs],
   );
+  const hasWikiTab = React.useMemo(
+    () => tabs.some((tab) => tab.mode === 'wiki'),
+    [tabs],
+  );
   const BrowserPane = isElectronBrowserRuntime() ? DesktopBrowserPane : IframeBrowserPane;
   const hasFileTabs = React.useMemo(
     () => tabs.some((tab) => tab.mode === 'file'),
@@ -2993,7 +3003,12 @@ export const ContextPanel: React.FC = () => {
             <WalkthroughView directory={effectiveDirectory} />
           </div>
         ) : null}
-        {activeTab?.mode !== 'chat' && !isFileTabActive && activeTab?.mode !== 'browser' && activeTab?.mode !== 'diff' && activeTab?.mode !== 'terminal' && activeTab?.mode !== 'walkthrough' ? activeNonChatContent : null}
+        {hasWikiTab ? (
+          <div className={cn('absolute inset-0', activeTab?.mode === 'wiki' ? 'block' : 'hidden')}>
+            <OpenWikiView directory={effectiveDirectory} />
+          </div>
+        ) : null}
+        {activeTab?.mode !== 'chat' && !isFileTabActive && activeTab?.mode !== 'browser' && activeTab?.mode !== 'diff' && activeTab?.mode !== 'terminal' && activeTab?.mode !== 'walkthrough' && activeTab?.mode !== 'wiki' ? activeNonChatContent : null}
       </div>
       </div>
     </aside>

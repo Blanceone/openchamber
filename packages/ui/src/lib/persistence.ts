@@ -1,6 +1,7 @@
 import type { DesktopSettings } from '@/lib/desktop';
 import { createProjectIdFromPath } from '@/lib/projectId';
 import { useUIStore } from '@/stores/useUIStore';
+import { useFeatureFlagsStore } from '@/stores/useFeatureFlagsStore';
 import { isMonoFontOption, isUiFontOption } from '@/lib/fontOptions';
 import {
   DEFAULT_FOLLOW_UP_BEHAVIOR,
@@ -862,6 +863,15 @@ const applyDesktopUiPreferences = (settings: DesktopSettings) => {
   if (typeof settings.draftStartersVisible === 'boolean' && settings.draftStartersVisible !== store.draftStartersVisible) {
     store.setDraftStartersVisible(settings.draftStartersVisible);
   }
+  {
+    const featureFlags = useFeatureFlagsStore.getState();
+    if (typeof settings.openWikiEnabled === 'boolean' && settings.openWikiEnabled !== featureFlags.openWikiEnabled) {
+      featureFlags.setOpenWikiEnabled(settings.openWikiEnabled);
+    }
+    if (typeof settings.openWikiAutoReveal === 'boolean' && settings.openWikiAutoReveal !== featureFlags.openWikiAutoReveal) {
+      featureFlags.setOpenWikiAutoReveal(settings.openWikiAutoReveal);
+    }
+  }
   if (typeof settings.terminalFontSize === 'number' && Number.isFinite(settings.terminalFontSize) && settings.terminalFontSize !== store.terminalFontSize) {
     store.setTerminalFontSize(settings.terminalFontSize);
   }
@@ -1171,6 +1181,18 @@ const sanitizeWebSettings = (payload: unknown): DesktopSettings | null => {
   }
   if (typeof candidate.walkthroughModelOverride === 'string' && candidate.walkthroughModelOverride.length > 0) {
     result.walkthroughModelOverride = candidate.walkthroughModelOverride;
+  }
+  if (typeof candidate.openWikiEnabled === 'boolean') {
+    result.openWikiEnabled = candidate.openWikiEnabled;
+  }
+  if (typeof candidate.openWikiLanguage === 'string' && candidate.openWikiLanguage.length > 0) {
+    result.openWikiLanguage = candidate.openWikiLanguage;
+  }
+  if (typeof candidate.openWikiModelOverride === 'string' && candidate.openWikiModelOverride.length > 0) {
+    result.openWikiModelOverride = candidate.openWikiModelOverride;
+  }
+  if (typeof candidate.openWikiAutoReveal === 'boolean') {
+    result.openWikiAutoReveal = candidate.openWikiAutoReveal;
   }
   if (typeof candidate.autoCreateWorktree === 'boolean') {
     result.autoCreateWorktree = candidate.autoCreateWorktree;

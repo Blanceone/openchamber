@@ -447,6 +447,20 @@ export const createSettingsHelpers = (dependencies) => {
       const trimmed = candidate.walkthroughModelOverride.trim();
       result.walkthroughModelOverride = trimmed.length > 0 ? trimmed : undefined;
     }
+    if (typeof candidate.openWikiEnabled === 'boolean') {
+      result.openWikiEnabled = candidate.openWikiEnabled;
+    }
+    if (typeof candidate.openWikiLanguage === 'string') {
+      const trimmed = candidate.openWikiLanguage.trim();
+      result.openWikiLanguage = trimmed.length > 0 ? trimmed : undefined;
+    }
+    if (typeof candidate.openWikiModelOverride === 'string') {
+      const trimmed = candidate.openWikiModelOverride.trim();
+      result.openWikiModelOverride = trimmed.length > 0 ? trimmed : undefined;
+    }
+    if (typeof candidate.openWikiAutoReveal === 'boolean') {
+      result.openWikiAutoReveal = candidate.openWikiAutoReveal;
+    }
     if (typeof candidate.defaultGitIdentityId === 'string') {
       const trimmed = candidate.defaultGitIdentityId.trim();
       result.defaultGitIdentityId = trimmed.length > 0 ? trimmed : undefined;

@@ -36,6 +36,11 @@ describe('getVisibleContextRailSurfaces', () => {
     ).toBe(true);
   });
 
+  test('hides the wiki surface when OpenWiki is disabled', () => {
+    expect(getVisibleContextRailSurfaces({ ...baseOptions, openWikiEnabled: false }).some((s) => s.id === 'wiki')).toBe(false);
+    expect(getVisibleContextRailSurfaces({ ...baseOptions, openWikiEnabled: true }).some((s) => s.id === 'wiki')).toBe(true);
+  });
+
   test('hides content-driven surfaces until a matching tab exists', () => {
     const preview = CONTEXT_SURFACES.find((surface) => surface.id === 'preview');
     if (!preview) {

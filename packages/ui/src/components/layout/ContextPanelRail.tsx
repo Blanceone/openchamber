@@ -133,6 +133,7 @@ export const ContextPanelRail: React.FC = () => {
   const openContextSurface = useUIStore((state) => state.openContextSurface);
   const shortcutOverrides = useUIStore((state) => state.shortcutOverrides);
   const planModeEnabled = useFeatureFlagsStore((state) => state.planModeEnabled);
+  const openWikiEnabled = useFeatureFlagsStore((state) => state.openWikiEnabled);
   const { screenWidth } = useDeviceInfo();
   const gitStatus = useGitStatus(directoryKey || null);
 
@@ -225,11 +226,12 @@ export const ContextPanelRail: React.FC = () => {
     return getVisibleContextRailSurfaces({
       railOrder: contextRailOrder,
       planModeEnabled,
+      openWikiEnabled,
       isVSCode: isVSCodeRuntime(),
       screenWidth,
       tabs,
     });
-  }, [contextRailOrder, planModeEnabled, screenWidth, tabs]);
+  }, [contextRailOrder, planModeEnabled, openWikiEnabled, screenWidth, tabs]);
 
   const handleDragEnd = React.useCallback((event: DragEndEvent) => {
     const { active, over } = event;

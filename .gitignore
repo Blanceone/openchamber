@@ -47,6 +47,10 @@ build/
 # Built webview assets (generated during build)
 src/main/resources/webview/
 
+# Staged OpenWiki bundle from prepare:openwiki (vendor_modules is large; rebuild locally)
+packages/electron/resources/openwiki/**
+!packages/electron/resources/openwiki/.gitkeep
+
 # IDE
 *.iml
 *.ipr

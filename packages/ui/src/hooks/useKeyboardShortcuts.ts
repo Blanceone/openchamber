@@ -499,9 +499,11 @@ export const useKeyboardShortcuts = () => {
         }
         const directory = normalizeContextPanelDirectoryKey(effectiveDirectory);
         const panelState = state.contextPanelByDirectory[directory];
+        const featureFlags = useFeatureFlagsStore.getState();
         const visibleSurfaces = getVisibleContextRailSurfaces({
           railOrder: state.contextRailOrder,
-          planModeEnabled: useFeatureFlagsStore.getState().planModeEnabled,
+          planModeEnabled: featureFlags.planModeEnabled,
+          openWikiEnabled: featureFlags.openWikiEnabled,
           isVSCode: isVSCodeRuntime(),
           screenWidth: window.innerWidth,
           tabs: panelState?.tabs ?? [],
