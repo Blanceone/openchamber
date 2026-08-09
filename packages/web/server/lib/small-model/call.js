@@ -129,7 +129,7 @@ const refreshOpenaiOauth = async (entry) => {
   return openaiRefreshPromise;
 };
 
-const ensureFreshOpenaiOauth = async (entry) => {
+export const ensureFreshOpenaiOauth = async (entry) => {
   if (entry.access && Number(entry.expires) > Date.now()) {
     return entry;
   }
@@ -138,6 +138,11 @@ const ensureFreshOpenaiOauth = async (entry) => {
   }
   return refreshOpenaiOauth(entry);
 };
+
+export const extractChatgptAccountIdFromToken = extractChatgptAccountId;
+
+export const CODEX_RESPONSES_ENDPOINT = CODEX_RESPONSES_URL;
+export const OPENCHAMBER_LLM_USER_AGENT = USER_AGENT;
 
 // ---------------------------------------------------------------------------
 // Wire formats
@@ -355,7 +360,7 @@ const callAnthropic = async ({ apiKey, modelID, prompt, system, maxOutputTokens,
   signal,
 });
 
-const getCopilotEndpoint = async ({ baseURL, headers, modelID }) => {
+export const getCopilotEndpoint = async ({ baseURL, headers, modelID }) => {
   const trimmedBase = baseURL.replace(/\/+$/, '');
   const response = await fetch(`${trimmedBase}/models`, {
     headers: {

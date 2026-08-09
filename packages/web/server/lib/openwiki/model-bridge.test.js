@@ -12,6 +12,11 @@ vi.mock('../opencode/shared.js', () => ({
 }));
 vi.mock('../small-model/call.js', () => ({
   resolveProviderLogin: (...args) => resolveProviderLogin(...args),
+  ensureFreshOpenaiOauth: async (entry) => entry,
+  extractChatgptAccountIdFromToken: () => null,
+  getCopilotEndpoint: async () => 'chat',
+  CODEX_RESPONSES_ENDPOINT: 'https://chatgpt.com/backend-api/codex/responses',
+  OPENCHAMBER_LLM_USER_AGENT: 'opencode/1.0 openchamber',
 }));
 vi.mock('../small-model/catalog.js', () => ({
   getCatalogProvider: () => null,

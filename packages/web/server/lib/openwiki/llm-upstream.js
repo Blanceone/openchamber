@@ -1,9 +1,17 @@
 import { readAuthFile } from '../opencode/auth.js';
 import { readConfig } from '../opencode/shared.js';
+import {
+  CODEX_RESPONSES_ENDPOINT,
+  OPENCHAMBER_LLM_USER_AGENT,
+  ensureFreshOpenaiOauth,
+  extractChatgptAccountIdFromToken,
+  getCopilotEndpoint,
+  resolveProviderLogin,
+} from '../small-model/call.js';
 import { getCatalogProvider, getModelCatalog } from '../small-model/catalog.js';
-import { resolveProviderLogin } from '../small-model/call.js';
 
 export const OPENCODE_ZEN_BASE_URL = 'https://opencode.ai/zen/v1';
+export const GOOGLE_GENERATE_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 
 /**
  * @param {string} providerID
@@ -59,6 +67,12 @@ const readProviderOptions = (workingDirectory, providerID) => {
   }
 };
 
+const unsupported = (message, providerID) => Object.assign(new Error(message), {
+  statusCode: 400,
+  code: 'provider-unsupported-for-openwiki',
+  providerID,
+});
+
 /**
  * Whether the OpenWiki LLM gateway can attempt this model (preflight / hasLogin).
  * @param {{ directory: string, model: { providerID: string, modelID: string } }} input
@@ -73,6 +87,123 @@ export const canUseOpenWikiGatewayModel = ({ directory, model }) => {
 };
 
 /**
+ * @param {{
+ *   providerID: string,
+ *   modelID: string,
+ *   login: object | null,
+ *   configBaseURL: string | null,
+ *   apiKey: string | null,
+ * }} input
+ */
+const resolveOpenaiOauthUpstream = ({ providerID, modelID, login, configBaseURL, apiKey }) => {
+  if (configBaseURL && apiKey) {
+    return {
+      kind: 'openai-compatible',
+      providerID,
+      modelID,
+      baseURL: configBaseURL.replace(/\/+$/, ''),
+      headers: {
+        authorization: `Bearer ${apiKey}`,
+        'content-type': 'application/json',
+      },
+    };
+  }
+  const access = typeof login?.access === 'string' ? login.access.trim() : '';
+  const refresh = typeof login?.refresh === 'string' ? login.refresh.trim() : '';
+  if (!access && !refresh) {
+    throw Object.assign(new Error('No OpenCode login found for provider "openai"'), {
+      statusCode: 401,
+      code: 'no-provider-login',
+      providerID,
+    });
+  }
+  const accountId = access ? extractChatgptAccountIdFromToken(access) : null;
+  return {
+    kind: 'openai-responses',
+    providerID,
+    modelID,
+    baseURL: CODEX_RESPONSES_ENDPOINT,
+    headers: {
+      authorization: `Bearer ${access || 'pending-refresh'}`,
+      'content-type': 'application/json',
+      accept: 'application/json',
+      originator: 'opencode',
+      'user-agent': OPENCHAMBER_LLM_USER_AGENT,
+      ...(accountId ? { 'ChatGPT-Account-Id': accountId } : {}),
+    },
+    oauth: true,
+  };
+};
+
+/**
+ * @param {{
+ *   providerID: string,
+ *   modelID: string,
+ *   login: object | null,
+ *   apiKey: string | null,
+ *   endpoint?: 'chat' | 'messages' | 'responses',
+ * }} input
+ */
+const resolveCopilotUpstream = ({ providerID, modelID, login, apiKey, endpoint = 'chat' }) => {
+  const token = apiKey
+    || (typeof login?.refresh === 'string' ? login.refresh.trim() : '')
+    || (typeof login?.access === 'string' ? login.access.trim() : '')
+    || (typeof login?.key === 'string' ? login.key.trim() : '');
+  if (!token) {
+    throw Object.assign(new Error('No OpenCode login found for provider "github-copilot"'), {
+      statusCode: 401,
+      code: 'no-provider-login',
+      providerID,
+    });
+  }
+  const baseURL = login?.enterpriseUrl
+    ? `https://copilot-api.${String(login.enterpriseUrl).replace(/^https?:\/\//, '').replace(/\/+$/, '')}`
+    : 'https://api.githubcopilot.com';
+  const authHeaders = {
+    authorization: `Bearer ${token}`,
+    'user-agent': OPENCHAMBER_LLM_USER_AGENT,
+    'x-github-api-version': '2026-06-01',
+    'content-type': 'application/json',
+  };
+  const headers = {
+    ...authHeaders,
+    'openai-intent': 'conversation-edits',
+    'x-initiator': 'agent',
+  };
+
+  if (endpoint === 'messages') {
+    return {
+      kind: 'anthropic',
+      providerID,
+      modelID,
+      baseURL: `${baseURL.replace(/\/+$/, '')}/v1`,
+      headers: {
+        ...headers,
+        'anthropic-version': '2023-06-01',
+      },
+    };
+  }
+
+  if (endpoint === 'responses') {
+    return {
+      kind: 'openai-responses',
+      providerID,
+      modelID,
+      baseURL: `${baseURL.replace(/\/+$/, '')}/responses`,
+      headers,
+    };
+  }
+
+  return {
+    kind: 'openai-compatible',
+    providerID,
+    modelID,
+    baseURL: baseURL.replace(/\/+$/, ''),
+    headers,
+  };
+};
+
+/**
  * Resolve where the gateway should forward OpenAI-format chat/completions.
  *
  * @param {{
@@ -81,12 +212,13 @@ export const canUseOpenWikiGatewayModel = ({ directory, model }) => {
  *   catalog?: object | null,
  * }} input
  * @returns {{
- *   kind: 'openai-compatible' | 'anthropic',
+ *   kind: 'openai-compatible' | 'anthropic' | 'google' | 'openai-responses',
  *   providerID: string,
  *   modelID: string,
  *   baseURL: string,
  *   headers: Record<string, string>,
  *   anonymous?: boolean,
+ *   oauth?: boolean,
  * }}
  */
 export const resolveLlmUpstream = ({ directory, model, catalog = null }) => {
@@ -108,12 +240,14 @@ export const resolveLlmUpstream = ({ directory, model, catalog = null }) => {
   const { baseURL: configBaseURL, apiKeyFromConfig } = readProviderOptions(directory, providerID);
   const apiKey = apiKeyFromConfig || extractApiKey(login);
 
-  // ChatGPT OAuth speaks Responses API, not chat-completions + tools for OpenWiki.
-  if (providerID === 'openai' && login?.type === 'oauth' && !configBaseURL) {
-    throw Object.assign(
-      new Error('OpenAI ChatGPT OAuth is not supported for OpenWiki yet. Choose an API-key provider or OpenCode Zen.'),
-      { statusCode: 400, code: 'provider-unsupported-for-openwiki', providerID },
-    );
+  if (providerID === 'openai' && login?.type === 'oauth') {
+    return resolveOpenaiOauthUpstream({
+      providerID,
+      modelID,
+      login,
+      configBaseURL,
+      apiKey,
+    });
   }
 
   if (providerID === 'anthropic' && apiKey && !configBaseURL) {
@@ -163,6 +297,10 @@ export const resolveLlmUpstream = ({ directory, model, catalog = null }) => {
     );
   }
 
+  if (providerID === 'github-copilot') {
+    return resolveCopilotUpstream({ providerID, modelID, login, apiKey, endpoint: 'chat' });
+  }
+
   if (!apiKey) {
     throw Object.assign(new Error(`No OpenCode login found for provider "${providerID}"`), {
       statusCode: 401,
@@ -172,17 +310,17 @@ export const resolveLlmUpstream = ({ directory, model, catalog = null }) => {
   }
 
   if (providerID === 'google' || providerID === 'gemini') {
-    throw Object.assign(
-      new Error('Google/Gemini is not available through the OpenWiki gateway yet. Pick an OpenAI-compatible or Anthropic model.'),
-      { statusCode: 400, code: 'provider-unsupported-for-openwiki', providerID },
-    );
-  }
-
-  if (providerID === 'github-copilot') {
-    throw Object.assign(
-      new Error('GitHub Copilot is not available through the OpenWiki gateway yet. Pick another logged-in model.'),
-      { statusCode: 400, code: 'provider-unsupported-for-openwiki', providerID },
-    );
+    return {
+      kind: 'google',
+      providerID,
+      modelID,
+      baseURL: (configBaseURL || GOOGLE_GENERATE_BASE_URL).replace(/\/+$/, ''),
+      headers: {
+        'content-type': 'application/json',
+        accept: 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+    };
   }
 
   let baseURL = configBaseURL;
@@ -198,9 +336,9 @@ export const resolveLlmUpstream = ({ directory, model, catalog = null }) => {
   }
 
   if (!baseURL) {
-    throw Object.assign(
-      new Error(`Provider "${providerID}" has no known API base URL for the OpenWiki gateway.`),
-      { statusCode: 400, code: 'provider-unsupported-for-openwiki', providerID },
+    throw unsupported(
+      `Provider "${providerID}" has no known API base URL for the OpenWiki gateway.`,
+      providerID,
     );
   }
 
@@ -217,11 +355,80 @@ export const resolveLlmUpstream = ({ directory, model, catalog = null }) => {
 };
 
 /**
- * Async wrapper that loads the models catalog only when base URL lookup needs it.
- * Avoids blocking OpenWiki job start on a slow/unreachable models.dev fetch.
+ * Async wrapper: OAuth refresh, Copilot endpoint probe, then catalog baseURL fallback.
  * @param {{ directory: string, model: { providerID: string, modelID: string } }} input
  */
 export const resolveLlmUpstreamAsync = async (input) => {
+  const { directory, model } = input;
+  if (!model?.providerID || !model?.modelID) {
+    throw Object.assign(new Error('Model is required'), {
+      statusCode: 400,
+      code: 'model-required',
+    });
+  }
+
+  const providerID = model.providerID;
+  const modelID = model.modelID;
+  const auth = readAuthFile();
+  const login = resolveProviderLogin({
+    auth,
+    workingDirectory: directory,
+    providerID,
+  });
+  const { baseURL: configBaseURL, apiKeyFromConfig } = readProviderOptions(directory, providerID);
+  const apiKey = apiKeyFromConfig || extractApiKey(login);
+
+  if (providerID === 'openai' && login?.type === 'oauth' && !configBaseURL) {
+    const fresh = await ensureFreshOpenaiOauth(login);
+    const accountId = extractChatgptAccountIdFromToken(fresh.access);
+    return {
+      kind: 'openai-responses',
+      providerID,
+      modelID,
+      baseURL: CODEX_RESPONSES_ENDPOINT,
+      headers: {
+        authorization: `Bearer ${fresh.access}`,
+        'content-type': 'application/json',
+        accept: 'application/json',
+        originator: 'opencode',
+        'user-agent': OPENCHAMBER_LLM_USER_AGENT,
+        ...(accountId ? { 'ChatGPT-Account-Id': accountId } : {}),
+      },
+      oauth: true,
+    };
+  }
+
+  if (providerID === 'github-copilot') {
+    const provisional = resolveCopilotUpstream({
+      providerID,
+      modelID,
+      login,
+      apiKey,
+      endpoint: 'chat',
+    });
+    try {
+      const endpoint = await getCopilotEndpoint({
+        baseURL: provisional.baseURL,
+        headers: {
+          Authorization: provisional.headers.authorization,
+          'User-Agent': OPENCHAMBER_LLM_USER_AGENT,
+          'X-GitHub-Api-Version': '2026-06-01',
+        },
+        modelID,
+      });
+      return resolveCopilotUpstream({
+        providerID,
+        modelID,
+        login,
+        apiKey,
+        endpoint,
+      });
+    } catch {
+      // Fall back to chat/completions when /models is unavailable.
+      return provisional;
+    }
+  }
+
   try {
     return resolveLlmUpstream({ ...input, catalog: null });
   } catch (error) {

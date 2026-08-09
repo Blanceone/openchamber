@@ -1,12 +1,13 @@
 OpenChamber 本机桌面裁剪 — 工作进展与后续事项
 ============================================
-日期：2026-08-09（续：阶段 I OpenWiki 嵌入）
+日期：2026-08-09（续：阶段 J–M；准备提交 origin/dev）
 分支：dev
 远程：origin = https://github.com/Blanceone/openchamber.git
 上游：upstream = https://github.com/openchamber/openchamber.git
-最近提交：见 git log（本文件随 OpenWiki 合入一并更新）
-本机安装包产物（含 OpenWiki LLM 网关 + vendor_modules + Electron ABI 原生模块，未签名）：
-  packages/electron/dist/OpenChamber-1.18.1-win-x64.exe（2026-08-09）
+最近提交：见本次 push（基线曾为 4a7ebefd）
+本机安装包产物（含 OpenWiki；未签名）：
+  packages/electron/dist/OpenChamber-1.18.1-win-x64.exe（2026-08-09 15:16，约 217 MB）
+  packages/electron/dist/win-unpacked/（含 resources/openwiki）
 
 路径约束（必须遵守）
 --------------------
@@ -15,6 +16,9 @@ OpenChamber 本机桌面裁剪 — 工作进展与后续事项
    （已写入 .cursor/rules/local-windows-paths.mdc、AGENTS.md、CONTRIBUTING.md）
 3. 例外（Microsoft 强制路径）：Windows Kits 头文件/库仍安装到
    C:\Program Files (x86)\Windows Kits\10（VS Build Tools 本身在 builder_tools\vs2022）
+4. 本机工作区在 D:\lxh\ai\openchamber-my\openchamber：已用 junction
+   D:\lxh\ai\openchamber-my\depends → D:\work\ai\openchamber\depends
+   使 package.json / prepare-openwiki 的 ../depends 与路径规则一致
 
 一、产品目标（已确认）
 --------------------
@@ -53,111 +57,74 @@ OpenChamber 本机桌面裁剪 — 工作进展与后续事项
 - OpenCode CLI 1.18.12 + electron:dev API 冒烟（会话/终端/Git；远程 API 410）
 
 【阶段 G】物理删除远程实现 + 工具链 + electron:build（本机 2026-08-08）
-代码清理：
-- 删除 CLI：commands-tunnel.js、commands-connect-url.js、cli-tunnel-profiles.js、cli-tunnel-utils.js
-- 删除 server tunnels 实现（保留 types.js + types.test.js + DOCUMENTATION.md）
-- 删除 server relay 实现与 APNs runtime（保留 DOCUMENTATION.md；boot 用 createDisabledApnsRuntime）
-- Capacitor 死分支清理；isVSCodeRuntime() 恒 false；runtimeConfig 去掉 desktopRelayRestore
-- Windows HMR：packages/web/scripts/run-dev-server.mjs 正确展开 OPENCHAMBER_PORT
-- CONTRIBUTING / electron README：路径约束与打包注意点
-- Settings：SettingsPageSlug 无 remote/tunnel（代码确认；GUI 见阶段 H）
-- package.mjs：改用工作区 electron-builder/cli.js（避免 bun x 丢 app-builder-bin）
-- prepare-opencode-cli：优先 ../depends/opencode-cli；Windows curl --ssl-no-revoke
+- 删除 CLI/server tunnel、relay、APNs 实现（保留 types/docs + disabled stubs）
+- Windows HMR、package.mjs、prepare-opencode-cli depends 路径等
 
 工具链 / 缓存（本机）：
-- VS Build Tools → D:\work\ai\builder_tools\vs2022
-  （Workload.VCTools + Windows11SDK.22621 + VC.Runtimes.*.Spectre）
-- OpenCode CLI zip → D:\work\ai\openchamber\depends\opencode-cli\1.18.12\...
-- Electron / electron-builder 缓存 → ../depends/electron、../depends/electron-builder
-- VS bootstrapper → ../depends/vs-buildtools\vs_BuildTools.exe
+- VS Build Tools → D:\work\ai\builder_tools\vs2022（当前机器缺失；见后续）
+- OpenCode CLI / openwiki tarball / openwiki-bundle / Electron 缓存 → depends/
 
-【阶段 H】中低优先级验证（2026-08-08）
-Settings GUI（打包 win-unpacked + CDP :9222）：
-- 打开设置后侧栏可见：通用 / 外观 / 聊天 / 通知 / 会话 / 快捷键 / 语音 / 用量 /
-  工作区 / 项目 / Git / 提供商 / 智能体 / 行为 / 命令 / MCP / Plugins / …
-- 无 Remote Instances / Tunnel / Private Relay / 远程实例 / 隧道设置
-- ?settings=git 可打开 Git 设置页；body 扫描无远程入口
+【阶段 H】Settings GUI + 安装包冒烟（2026-08-08）
+- Settings 无 Remote/Tunnel；health/Git/远程 410；未签名安装包
 
-安装包首次启动冒烟（win-unpacked\OpenChamber.exe）：
-- /health → 200；runtime=desktop；OpenCode 1.18.12（bundled）
-- /api/git/check?directory=… → 200 isGitRepository=true
-- /api/client-auth/status、/connect、tunnel/status、POST /api/push/apns-token → 410
-- 冒烟后已结束 OpenChamber 进程
+【阶段 I】OpenWiki 嵌入 Windows 桌面（源码入库：4a7ebefd）
+- UI Wiki 面 + Settings；server openwiki/*；LLM 网关；打包脚本
 
-安装包签名评估：
-- Authenticode Status=NotSigned
-- 环境无 CSC_LINK / WINDOWS_CSC_LINK / CSC_KEY_PASSWORD
-- 结论：保持未签名；外部分发前需提供代码签名证书后再启用
+【阶段 J】本机 OpenWiki 打包闭环 + JSON 中间件（2026-08-09）
+- 恢复 openwiki-0.3.1.tgz；prepare/rebuild/verify-openwiki；NSIS 含 openwiki
+- 跳过 rebuild:native（缺 VS；node-pty N-API prebuilds）
+- 修复：/api/openwiki 加入 express JSON 白名单（否则 POST model-required）
+- 冒烟：preflight/generate 入队、.wiki 脚手架；匿名 Zen 曾 fetch failed
 
-Windows ARM64 OpenCode CLI 临时方案：
-- prepare-opencode-cli 仍对 win arm64 打包 x64-baseline（上游 Bun FFI 问题）
-- 结论：上游未修复前保持；修复后再去掉临时分支
+【阶段 K】网关上游映射 Gemini / Copilot / ChatGPT OAuth（2026-08-09）
+- llm-upstream / llm-chat 翻译；单测通过；规格文档更新
 
-【阶段 I】OpenWiki 嵌入 Windows 桌面（2026-08-08 → 2026-08-09）
-规格：docs/OPENWIKI_INTEGRATION.md（Accepted）
-实现要点：
-- UI：Context rail Wiki 面（OpenWikiView）+ Settings OpenWiki 页；全 locale 文案
-- 服务端：packages/web/server/lib/openwiki/*（ownership/consent、format、job runner、routes）
-- 模型：job 作用域 loopback OpenAI-compatible LLM 网关（方案 A）
-  - 子进程仅见 openai-compatible + job token；真实密钥留在 OpenChamber 进程
-  - 支持 Anthropic 工具格式翻译；opencode/Zen 有 Key 或免费档匿名尝试
-- 打包：
-  - prepare-openwiki：从 ../depends/npm-packs/openwiki-0.3.1.tgz 缓存安装并 stage
-  - 依赖打成 vendor_modules（electron-builder 会剥离 extraResources 下的 node_modules）
-  - 运行时 junction：node_modules → vendor_modules
-  - worker：ELECTRON_RUN_AS_NODE=1
-  - rebuild:openwiki-native：better-sqlite3 按 Electron 41 ABI（145）重编
-  - verify:openwiki / verify:openwiki:packaged
-- 仓库不提交 vendor_modules（.gitignore + resources/openwiki/.gitkeep）
-- OpenWiki npm 包本身零 fork，便于跟上游升级
+【阶段 L】Thinking 模型与流式兼容（2026-08-09）
+- reasoning_content：网关按 tool_call id 捕获并回注（DeepSeek/Zen thinking+tools）
+- 上游强制非流式以便捕获；客户端若要 stream 则网关合成 SSE
+- 剥离 stream_options（与 stream=false 并存会 400）
+- 单测：llm-reasoning / buildOpenaiCompatibleForwardBody
 
-排查过的打包问题：
-1. 目录解析把 async resolveProjectDirectory 当同步路径 → 已修
-2. consent 按钮无反馈 / job key 规范化 → 已修
-3. 直连 env 映射遇 opencode 无登录失败 → 改为 LLM 网关
-4. 映射中秒退：缺 ELECTRON_RUN_AS_NODE → 已修；并加生成中转圈
-5. 安装包缺 @anthropic-ai/vertex-sdk：node_modules 被剥离 → vendor_modules
-6. better-sqlite3 ABI 137 vs Electron 145 → rebuild:openwiki-native
-
-验证（本机）：
-- packages/web openwiki 单测（model-bridge / llm-* / gateway / ownership / resolve-package / worker-runtime）通过
-- electron:build 完整链成功；verify:openwiki:packaged 确认 vendor_modules 含 vertex-sdk 与 native .node
-- 安装包路径：packages/electron/dist/OpenChamber-1.18.1-win-x64.exe
+【阶段 M】Wiki 文档语言固定简体中文（2026-08-09）
+- 常量 OPENWIKI_DOCUMENT_LANGUAGE = zh-CN；job 忽略 Settings/请求体覆盖
+- 提示词注入中文写作要求；FORMAT 预设含 Language (fixed)
+- Settings 去掉语言输入；搜索与 settings sanitize 不再接受 openWikiLanguage
 
 三、验证
 --------
 已跑：
-- bun test：local-desktop-remote、runtime-fetch、runtime-auth — 38 pass
-- bun test：tunnels/types.test.js — 4 pass
-- bun run dead-code（非阻塞报告；无阶段 G 新增阻断项）
-- node --check：package.mjs、prepare-opencode-cli.mjs
-- electron:build 完整链：web assets → prepare OpenCode CLI → bundle main →
-  rebuild native（node-pty）→ NSIS 未签名安装包 — 成功
-  产物：packages/electron/dist/OpenChamber-1.18.1-win-x64.exe
-        packages/electron/dist/win-unpacked/
-        packages/electron/dist/latest.yml
-- 阶段 I：openwiki 单测 + prepare/rebuild/verify-openwiki + electron:build（含 OpenWiki）
+- vitest：openwiki llm-* / reasoning / format / core-routes OpenWiki JSON — pass
+- prepare:openwiki + rebuild:openwiki-native + verify:openwiki(:packaged) — pass
+- package.mjs --win（含上述修复的重建，15:16）— pass（跳过 rebuild:native）
+- bun run dead-code（根目录，非阻塞报告）
+
+未闭环：
+- 完整 Generate/Update 产出稳定中文正文（依赖可用 LLM；过程中修过多项 400）
+- rebuild:native（缺 VS Build Tools）
 
 四、刻意未做 / 后续
 ------------------
-优先级高 / 中：
-1. OpenWiki 生成端到端冒烟（已登录 API 模型 / Zen Key / 免费 opencode）并确认 .wiki 产物
-2. Gemini / Copilot / ChatGPT OAuth 等网关上游映射（当前明确 unsupported）
+优先级高：
+1. 用已登录模型再跑完整 Generate + Update，确认中文 .wiki 正文
+2. 重装 VS Build Tools → D:\work\ai\builder_tools\vs2022，恢复 rebuild:native
 
-优先级低（需外部条件）：
-1. 安装包签名（需 CSC 证书与密码）
-2. 上游修复 Windows ARM64 OpenCode CLI 后，去掉 x64-baseline 临时方案
-3. openwiki 上游版本升级流程演练（换 tarball + 重打 bundle）
+优先级中：
+1. ChatGPT Codex / Copilot enterprise 边缘失败 UX
+2. 匿名 Zen / 网络 TLS 稳定性（若仍用免费档）
+
+优先级低：
+1. 安装包签名
+2. Win ARM64 OpenCode CLI 临时方案清理
+3. openwiki 上游升级演练
 
 五、冒烟清单
 ------------
-[x] electron:dev 能启动（阶段 F）
-[x] Git API 可用；会话 create/list 正常；终端 create/delete 可用（阶段 F）
-[x] CLI tunnel/connect-url → disabled
-[x] 远程 API → client-auth/connect/apns/tunnel 410
-[x] Settings 代码确认无 Remote / Tunnel 页 slug
-[x] Settings GUI 确认无 Remote / Tunnel（打包应用 CDP，2026-08-08）
-[x] electron:build 安装包（2026-08-08 未签名重建成功）
-[x] 安装包首次启动冒烟（health / OpenCode / Git / 远程 410）
-[x] OpenWiki 打包链：prepare + Electron ABI rebuild + verify packaged（2026-08-09）
-[ ] OpenWiki 安装包内完整生成/增量更新冒烟（待装新包后人工确认）
+[x] electron:dev / Git / 会话 / 终端（阶段 F）
+[x] CLI tunnel/connect-url disabled；远程 API 410
+[x] Settings 无 Remote / Tunnel（代码 + GUI）
+[x] 含 OpenWiki 的安装包 + verify:openwiki:packaged（多次重建至 15:16）
+[x] OpenWiki JSON 中间件 + preflight/generate 入队
+[x] reasoning_content / stream_options 网关修复（源码 + 单测；装入 15:16 包）
+[x] Wiki 语言固定 zh-CN（源码 + 单测；装入 15:16 包）
+[ ] OpenWiki 完整中文正文 Generate/Update 人工确认
+[ ] rebuild:native + 全量 electron:build（需 VS Build Tools）

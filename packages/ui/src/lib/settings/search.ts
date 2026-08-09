@@ -730,13 +730,6 @@ const SETTINGS_SEARCH_ITEMS: readonly SettingsSearchItem[] = [
     keywords: ['wiki', 'auto open', 'reveal'],
   },
   {
-    id: 'openwiki.language',
-    page: 'openwiki',
-    titleKey: 'settings.openwiki.language.label',
-    descriptionKey: 'settings.openwiki.language.info',
-    keywords: ['wiki language', 'locale'],
-  },
-  {
     id: 'openwiki.model',
     page: 'openwiki',
     titleKey: 'settings.openwiki.model.label',

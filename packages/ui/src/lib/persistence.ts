@@ -1185,9 +1185,7 @@ const sanitizeWebSettings = (payload: unknown): DesktopSettings | null => {
   if (typeof candidate.openWikiEnabled === 'boolean') {
     result.openWikiEnabled = candidate.openWikiEnabled;
   }
-  if (typeof candidate.openWikiLanguage === 'string' && candidate.openWikiLanguage.length > 0) {
-    result.openWikiLanguage = candidate.openWikiLanguage;
-  }
+  // openWikiLanguage is ignored: OpenWiki document language is fixed to zh-CN.
   if (typeof candidate.openWikiModelOverride === 'string' && candidate.openWikiModelOverride.length > 0) {
     result.openWikiModelOverride = candidate.openWikiModelOverride;
   }

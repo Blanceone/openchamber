@@ -1,6 +1,7 @@
 export { classifyWikiOwnership } from './ownership.js';
 export { readFormatBundle, writeFormatBundle, ensureFormatSeeded, buildFormatUserMessage } from './format.js';
 export { FORMAT_PRESET_IDS, DEFAULT_FORMAT_PRESET_ID, getPresetBodies, isFormatPresetId } from './presets.js';
+export { OPENWIKI_DOCUMENT_LANGUAGE, OPENWIKI_DOCUMENT_LANGUAGE_PROMPT } from './language.js';
 export {
   parseModelRef,
   buildOpenWikiModelEnv,

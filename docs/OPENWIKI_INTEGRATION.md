@@ -12,7 +12,7 @@ Related trees:
 Embed OpenWiki into the Windows OpenChamber desktop product so a user can:
 
 1. Open a **native wiki browser** (directory tree + Markdown reader) from the context rail.
-2. Configure wiki behavior in **Settings** (paths, mode, language, generation options) — **without a second model/provider credential UI**.
+2. Configure wiki behavior in **Settings** (paths, mode, generation options) — **without a second model/provider credential UI**. Document language is fixed to Simplified Chinese (`zh-CN`) and is not user-configurable.
 3. **Generate** (full regenerate / `init`) and **Update** (incremental) a **code-mode** wiki for the current project, reusing the **same model and OpenCode credentials** the user already selected for OpenChamber / OpenCode.
 4. Ship `openwiki` as a **workspace dependency** and, for release builds, **bundle it with the Electron package** so the feature works without a separate global `openwiki` install.
 5. Persist OpenChamber-managed wiki artifacts under the project’s **`.wiki/`** directory (long-lived). Do not touch root agent docs, CI, or other project files outside that sandbox. If a wiki-like tree already exists and may be project-owned, **require explicit user consent** before any OpenWiki write.
@@ -46,7 +46,7 @@ Non-goals for this integration slice:
 ```text
 ┌────────────────────────────── UI (packages/ui) ──────────────────────────────┐
 │ Context rail "Wiki" → OpenWikiView (tree + Markdown)                         │
-│ Settings → OpenWiki page (model / language / format editors / job prefs)     │
+│ Settings → OpenWiki page (model / format editors / job prefs; language fixed) │
 │ Wiki panel → browse + link to edit structure/format                          │
 │ Generate / Update actions → runtimeFetch('/api/openwiki/...')                │
 │ Model identity passed as providerID + modelID from useConfigStore / session  │
@@ -168,7 +168,7 @@ Wire shape on every generate/update request:
     "providerID": "anthropic",
     "modelID": "claude-opus-4"
   },
-  "language": null
+  "language": "zh-CN"
 }
 ```
 
@@ -199,12 +199,14 @@ The **gateway** resolves OpenCode provider IDs:
 | OpenCode providerID (examples) | Gateway upstream | Notes |
 |---|---|---|
 | `openai` (API key) | openai-compatible → OpenAI (or config `baseURL`) | Chat Completions + tools |
-| `openai` (ChatGPT OAuth / codex) | **Unsupported** (actionable error) | Responses-only; not chat-completions tools |
+| `openai` (ChatGPT OAuth / codex) | openai-responses → Codex Responses API (translated) | Tool-calling supported when the Codex backend accepts function tools; failures fail closed |
 | `anthropic` (API key) | Anthropic Messages API (translated from OpenAI tools format) | Streaming synthesized as OpenAI SSE when requested |
 | `openrouter` / custom with `baseURL` | openai-compatible proxy | Auth from OpenCode login/config |
 | `opencode` / `opencode-go` with Zen API key | `https://opencode.ai/zen/v1` | Preferred for paid Zen models |
 | `opencode` / `opencode-go` free-tier ids (e.g. `big-pickle`, `*-free`) | Zen anonymously when no key | If Zen rejects, clear `no-provider-login` style error |
-| `google` / `gemini`, `github-copilot`, bedrock, … | **Unsupported** until wired | UI blocker: pick another logged-in model |
+| `google` / `gemini` | Google `generateContent` (translated tools) | Uses OpenCode API key; fail closed on upstream errors |
+| `github-copilot` | Probe `/models` → chat / messages / responses | Same auth headers as OpenCode small-model |
+| bedrock, unknown providers without `baseURL` | **Unsupported** | UI blocker: pick another logged-in model |
 
 Gateway rules:
 
@@ -400,7 +402,7 @@ Fields / controls:
 | Control | Persistence | Notes |
 |---|---|---|
 | `openWikiEnabled` | OpenChamber settings | Hides rail when false |
-| `openWikiLanguage` | OpenChamber settings | BCP-47; null = default |
+| Document language | Fixed product constant | Always `zh-CN` (Simplified Chinese); not exposed in Settings |
 | `openWikiModelOverride` | OpenChamber settings | `provider/model` or null = follow OpenCode selection |
 | `openWikiAutoReveal` | OpenChamber settings | Reveal wiki + `index.md` after success |
 | Format **preset** | Marker / project `.wiki` | See §6.6 |
@@ -586,7 +588,7 @@ Per change-discipline: package-scoped type-check/lint/tests for touched packages
 ### Phase 1 — Scaffolding
 
 - Pin npm `openwiki` + adapter shell + `DOCUMENTATION.md`.
-- Settings: model picker, language, **format preset + brief/format editors** (read/write `.wiki` control files).
+- Settings: model picker, **format preset + brief/format editors** (read/write `.wiki` control files). Language fixed to `zh-CN`.
 - Context surface + viewer wired to `.wiki/` (no jobs yet); foreign-consent empty states.
 
 ### Phase 2 — Model bridge + async jobs
@@ -604,7 +606,7 @@ Per change-discipline: package-scoped type-check/lint/tests for touched packages
 
 ### Phase 4 — Hardening (optional follow-ups)
 
-- Broader provider mapping (Copilot OAuth edge cases, ChatGPT plan).
+- Broader provider mapping for Gemini / Copilot / ChatGPT OAuth is implemented in the gateway translators; harden edge cases (Codex tool rejection, Copilot enterprise URL variants) as they appear in smoke.
 - Personal mode / connector UI (deferred).
 - Optional graph visualizer embed.
 - Upstream PR to `openwiki` for stable `exports` + injectable provider on `runOpenWikiAgent`.
@@ -630,7 +632,7 @@ The feature is done for v1 when:
 1. User can open **Wiki** from the context rail and browse `<project>/.wiki/**/*.md` with Markdown preview.
 2. First Generate creates a long-lived `.wiki/` (plus OpenChamber marker); jobs do not leave a durable `openwiki/` directory or edit root MD/CI.
 3. If a foreign/existing wiki is detected, the UI asks the user to **adopt in place**, **backup then rebuild**, or **cancel** before any OpenWiki write; Cancel leaves files untouched.
-4. Settings → OpenWiki configures language, Wiki model, and **document brief/structure/format** (presets + editors persisted under `.wiki/`) with search + all locales — no telemetry controls.
+4. Settings → OpenWiki configures Wiki model and **document brief/structure/format** (presets + editors persisted under `.wiki/`) with search + all locales — no telemetry controls. Document language is always Simplified Chinese (`zh-CN`).
 5. Generate/Update steers pages using the user’s format spec; control files are not rewritten by normal agent runs.
 6. User can **Generate** / **Update** / **Regenerate** without entering any OpenWiki API key; jobs use OpenCode credentials and the resolved model.
 7. Jobs are async and out-of-process; OpenWiki PostHog is never enabled.

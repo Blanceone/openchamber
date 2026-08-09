@@ -185,7 +185,6 @@ export function registerOpenWikiRoutes(app, deps) {
         directory,
         command: 'init',
         model: body.model,
-        language: body.language ?? settings.openWikiLanguage ?? null,
         consent: body.consent === true,
         consentAction: body.consentAction,
         openWikiModelOverride: typeof settings.openWikiModelOverride === 'string'
@@ -207,7 +206,6 @@ export function registerOpenWikiRoutes(app, deps) {
         directory,
         command: 'update',
         model: body.model,
-        language: body.language ?? settings.openWikiLanguage ?? null,
         consent: body.consent === true,
         consentAction: body.consentAction,
         openWikiModelOverride: typeof settings.openWikiModelOverride === 'string'

@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import http from 'node:http';
-import { forwardChatCompletions } from './llm-chat.js';
+import { createReasoningContentStore, forwardChatCompletions } from './llm-chat.js';
 import { resolveLlmUpstreamAsync } from './llm-upstream.js';
 
 /** @type {Map<string, { close: () => Promise<void> }>} */
@@ -50,6 +50,8 @@ export const startOpenWikiLlmGateway = async ({ directory, model }) => {
 
   const upstream = await resolveLlmUpstreamAsync({ directory, model });
   const token = randomBytes(24).toString('hex');
+  // Job-scoped: LangChain strips reasoning_content; reinject for thinking+tools providers.
+  const reasoningStore = createReasoningContentStore();
 
   const server = http.createServer(async (req, res) => {
     try {
@@ -87,6 +89,7 @@ export const startOpenWikiLlmGateway = async ({ directory, model }) => {
           upstream: liveUpstream,
           body: body && typeof body === 'object' ? body : {},
           res,
+          reasoningStore,
         });
         return;
       }

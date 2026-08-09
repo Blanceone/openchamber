@@ -12,6 +12,11 @@ vi.mock('../opencode/shared.js', () => ({
 }));
 vi.mock('../small-model/call.js', () => ({
   resolveProviderLogin: (...args) => resolveProviderLogin(...args),
+  ensureFreshOpenaiOauth: async (entry) => entry,
+  extractChatgptAccountIdFromToken: () => null,
+  getCopilotEndpoint: async () => 'chat',
+  CODEX_RESPONSES_ENDPOINT: 'https://chatgpt.com/backend-api/codex/responses',
+  OPENCHAMBER_LLM_USER_AGENT: 'opencode/1.0 openchamber',
 }));
 vi.mock('../small-model/catalog.js', () => ({
   getCatalogProvider: (_catalog, providerID) => {
@@ -81,5 +86,42 @@ describe('resolveLlmUpstream', () => {
       directory: 'D:\\repo',
       model: { providerID: 'anthropic', modelID: 'claude-opus-4' },
     })).toBe(false);
+  });
+
+  it('maps google API keys to google kind', () => {
+    resolveProviderLogin.mockReturnValue({ type: 'api', key: 'google-key' });
+    const upstream = resolveLlmUpstream({
+      directory: 'D:\\repo',
+      model: { providerID: 'google', modelID: 'gemini-2.5-flash' },
+    });
+    expect(upstream.kind).toBe('google');
+    expect(upstream.headers['x-goog-api-key']).toBe('google-key');
+  });
+
+  it('maps github-copilot tokens to openai-compatible by default', () => {
+    resolveProviderLogin.mockReturnValue({ type: 'oauth', access: 'copilot-token', refresh: 'copilot-token' });
+    const upstream = resolveLlmUpstream({
+      directory: 'D:\\repo',
+      model: { providerID: 'github-copilot', modelID: 'gpt-4.1' },
+    });
+    expect(upstream.kind).toBe('openai-compatible');
+    expect(upstream.baseURL).toContain('githubcopilot.com');
+    expect(upstream.headers.authorization).toBe('Bearer copilot-token');
+  });
+
+  it('maps ChatGPT OAuth to openai-responses', () => {
+    resolveProviderLogin.mockReturnValue({
+      type: 'oauth',
+      access: 'chatgpt-access',
+      refresh: 'chatgpt-refresh',
+      expires: Date.now() + 60_000,
+    });
+    const upstream = resolveLlmUpstream({
+      directory: 'D:\\repo',
+      model: { providerID: 'openai', modelID: 'gpt-5' },
+    });
+    expect(upstream.kind).toBe('openai-responses');
+    expect(upstream.oauth).toBe(true);
+    expect(upstream.headers.authorization).toBe('Bearer chatgpt-access');
   });
 });

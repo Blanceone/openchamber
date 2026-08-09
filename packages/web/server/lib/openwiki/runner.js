@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createWikiBind, removeWikiBind } from './bind.js';
 import { buildFormatUserMessage, ensureFormatSeeded, readFormatBundle } from './format.js';
+import { OPENWIKI_DOCUMENT_LANGUAGE } from './language.js';
 import {
   createJob,
   getChild,
@@ -132,7 +133,6 @@ export const applyConsentIfNeeded = async (projectDirectory, options = {}) => {
  *   directory: string,
  *   command: 'init' | 'update',
  *   model: unknown,
- *   language?: string | null,
  *   consent?: boolean,
  *   consentAction?: 'adopt' | 'backup-rebuild',
  *   openWikiModelOverride?: string | null,
@@ -189,7 +189,8 @@ export const startOpenWikiJob = async (input) => {
     directory,
     command: input.command,
     model,
-    language: input.language ?? null,
+    // Document language is product-locked; ignore any client/settings override.
+    language: OPENWIKI_DOCUMENT_LANGUAGE,
     userMessage,
   });
 

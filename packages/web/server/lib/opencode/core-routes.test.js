@@ -127,6 +127,31 @@ describe('core-routes', () => {
     expect(response.body).toEqual({ body: { content: 'Snippet body' } });
   });
 
+  it('should parse JSON bodies for OpenWiki routes', async () => {
+    const app = express();
+    registerCommonRequestMiddleware(app, { express });
+    app.post('/api/openwiki/preflight', (req, res) => {
+      res.json({ body: req.body });
+    });
+
+    const response = await request(app)
+      .post('/api/openwiki/preflight')
+      .send({
+        directory: 'D:\\repo',
+        model: { providerID: 'opencode', modelID: 'big-pickle' },
+        command: 'init',
+      })
+      .expect(200);
+
+    expect(response.body).toEqual({
+      body: {
+        directory: 'D:\\repo',
+        model: { providerID: 'opencode', modelID: 'big-pickle' },
+        command: 'init',
+      },
+    });
+  });
+
   it('should parse JSON bodies for custom provider upsert routes', async () => {
     const app = express();
     registerCommonRequestMiddleware(app, { express });

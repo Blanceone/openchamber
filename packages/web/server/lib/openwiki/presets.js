@@ -1,8 +1,18 @@
 /**
  * Built-in format presets. Bodies are English source text; UI localizes titles.
+ * Document language is fixed to zh-CN by OpenChamber (see language.js); presets
+ * still restate that rule in FORMAT.md so seeded control files stay explicit.
  */
 
 /** @typedef {'openwiki-default' | 'architecture-module' | 'api-service' | 'custom'} FormatPresetId */
+
+const LANGUAGE_RULES = [
+  '# Language (fixed)',
+  '',
+  '- Write all wiki prose in Simplified Chinese (zh-CN).',
+  '- Keep code identifiers, paths, API names, and commands unchanged.',
+  '- Do not switch the wiki language.',
+].join('\n');
 
 /** @type {FormatPresetId[]} */
 export const FORMAT_PRESET_IDS = [
@@ -33,6 +43,8 @@ export const getPresetBodies = (id) => {
           'Prioritize architecture, module boundaries, and change-impact guidance.',
         ].join('\n'),
         format: [
+          LANGUAGE_RULES,
+          '',
           '# Required structure',
           '',
           '- `index.md` / quickstart: navigation and how to use this wiki',
@@ -59,6 +71,8 @@ export const getPresetBodies = (id) => {
           'Emphasize public contracts, service boundaries, data models, and operations.',
         ].join('\n'),
         format: [
+          LANGUAGE_RULES,
+          '',
           '# Required structure',
           '',
           '- Quickstart / index',
@@ -78,13 +92,15 @@ export const getPresetBodies = (id) => {
     case 'custom':
       return {
         instructions: '',
-        format: '',
+        format: LANGUAGE_RULES,
       };
     case 'openwiki-default':
     default:
       return {
         instructions: '',
         format: [
+          LANGUAGE_RULES,
+          '',
           '# Format',
           '',
           'Follow OpenWiki’s built-in documentation outline and quality rules for this repository.',

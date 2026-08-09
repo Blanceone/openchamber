@@ -44,7 +44,6 @@ export function OpenWikiPage() {
 
   const [enabled, setEnabled] = useState(true);
   const [autoReveal, setAutoReveal] = useState(true);
-  const [language, setLanguage] = useState('');
   const [modelOverride, setModelOverride] = useState('');
   const [presetId, setPresetId] = useState<OpenWikiFormatPresetId>('openwiki-default');
   const [instructions, setInstructions] = useState('');
@@ -80,7 +79,6 @@ export function OpenWikiPage() {
         const nextAutoReveal = settings.openWikiAutoReveal !== false;
         setEnabled(nextEnabled);
         setAutoReveal(nextAutoReveal);
-        setLanguage(settings.openWikiLanguage || '');
         setModelOverride(settings.openWikiModelOverride || '');
         useFeatureFlagsStore.getState().setOpenWikiEnabled(nextEnabled);
         useFeatureFlagsStore.getState().setOpenWikiAutoReveal(nextAutoReveal);
@@ -177,19 +175,6 @@ export function OpenWikiPage() {
             void persistSettings({ openWikiAutoReveal: checked });
           }}
         />
-        <SettingsFieldRow
-          settingsItem="openwiki.language"
-          label={t('settings.openwiki.language.label')}
-          info={t('settings.openwiki.language.info')}
-        >
-          <input
-            className="h-9 w-48 rounded-md border border-border-subtle bg-transparent px-2 text-sm"
-            value={language}
-            placeholder="zh-CN"
-            onChange={(event) => setLanguage(event.target.value)}
-            onBlur={() => void persistSettings({ openWikiLanguage: language.trim() || undefined })}
-          />
-        </SettingsFieldRow>
         <SettingsFieldRow
           settingsItem="openwiki.model"
           label={t('settings.openwiki.model.label')}

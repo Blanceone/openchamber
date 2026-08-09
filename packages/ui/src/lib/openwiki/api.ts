@@ -104,15 +104,15 @@ export async function startOpenWikiGenerate(
   directory: string,
   options: {
     model?: OpenWikiModelRef | string;
-    language?: string | null;
     consent?: boolean;
     consentAction?: OpenWikiConsentAction;
   } = {},
 ): Promise<OpenWikiJob> {
+  const { model, consent, consentAction } = options;
   const response = await runtimeFetch(`${BASE}/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ directory, ...options }),
+    body: JSON.stringify({ directory, model, consent, consentAction }),
   });
   if (!response.ok) return throwFromResponse(response, 'Failed to start wiki generation');
   const payload = await readJson<{ job: OpenWikiJob }>(response);
@@ -123,15 +123,15 @@ export async function startOpenWikiUpdate(
   directory: string,
   options: {
     model?: OpenWikiModelRef | string;
-    language?: string | null;
     consent?: boolean;
     consentAction?: OpenWikiConsentAction;
   } = {},
 ): Promise<OpenWikiJob> {
+  const { model, consent, consentAction } = options;
   const response = await runtimeFetch(`${BASE}/update`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ directory, ...options }),
+    body: JSON.stringify({ directory, model, consent, consentAction }),
   });
   if (!response.ok) return throwFromResponse(response, 'Failed to start wiki update');
   const payload = await readJson<{ job: OpenWikiJob }>(response);

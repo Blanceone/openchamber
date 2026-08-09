@@ -11,6 +11,7 @@ import {
   getPresetBodies,
   isFormatPresetId,
 } from './presets.js';
+import { OPENWIKI_DOCUMENT_LANGUAGE_PROMPT } from './language.js';
 import { classifyWikiOwnership } from './ownership.js';
 
 /**
@@ -119,7 +120,7 @@ export const ensureFormatSeeded = async (projectDirectory, presetId = DEFAULT_FO
  * @param {{ instructions: string, format: string }} bundle
  */
 export const buildFormatUserMessage = (bundle) => {
-  const parts = [];
+  const parts = [OPENWIKI_DOCUMENT_LANGUAGE_PROMPT];
   if (bundle.instructions.trim()) {
     parts.push('Repository OpenWiki brief (INSTRUCTIONS.md):\n' + bundle.instructions.trim());
   }
@@ -129,9 +130,10 @@ export const buildFormatUserMessage = (bundle) => {
         + bundle.format.trim(),
     );
   }
-  if (parts.length === 0) {
-    return 'Generate or update the repository wiki using OpenWiki defaults. Do not modify INSTRUCTIONS.md or FORMAT.md.';
+  if (!bundle.instructions.trim() && !bundle.format.trim()) {
+    parts.push('Generate or update the repository wiki using OpenWiki defaults. Do not modify INSTRUCTIONS.md or FORMAT.md.');
+  } else {
+    parts.push('Do not rewrite INSTRUCTIONS.md or FORMAT.md unless the user explicitly asked to change the brief/format.');
   }
-  parts.push('Do not rewrite INSTRUCTIONS.md or FORMAT.md unless the user explicitly asked to change the brief/format.');
   return parts.join('\n\n');
 };

@@ -136,6 +136,7 @@ export type DesktopSettings = {
   // small model"; a value replaces it for this feature only.
   walkthroughModelOverride?: string; // format: "provider/model"
   openWikiEnabled?: boolean;
+  /** @deprecated Ignored — OpenWiki document language is fixed to zh-CN. */
   openWikiLanguage?: string;
   openWikiModelOverride?: string; // format: "provider/model"
   openWikiAutoReveal?: boolean;

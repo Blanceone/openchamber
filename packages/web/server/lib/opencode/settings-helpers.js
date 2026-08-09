@@ -450,10 +450,7 @@ export const createSettingsHelpers = (dependencies) => {
     if (typeof candidate.openWikiEnabled === 'boolean') {
       result.openWikiEnabled = candidate.openWikiEnabled;
     }
-    if (typeof candidate.openWikiLanguage === 'string') {
-      const trimmed = candidate.openWikiLanguage.trim();
-      result.openWikiLanguage = trimmed.length > 0 ? trimmed : undefined;
-    }
+    // openWikiLanguage is intentionally ignored: document language is fixed to zh-CN.
     if (typeof candidate.openWikiModelOverride === 'string') {
       const trimmed = candidate.openWikiModelOverride.trim();
       result.openWikiModelOverride = trimmed.length > 0 ? trimmed : undefined;
