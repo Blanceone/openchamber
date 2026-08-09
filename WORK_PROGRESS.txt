@@ -1,12 +1,12 @@
 OpenChamber 本机桌面裁剪 — 工作进展与后续事项
 ============================================
-日期：2026-08-09（续：阶段 J–M；准备提交 origin/dev）
+日期：2026-08-10（续：阶段 N 计划；OpenWiki 格式设置 UX）
 分支：dev
 远程：origin = https://github.com/Blanceone/openchamber.git
 上游：upstream = https://github.com/openchamber/openchamber.git
-最近提交：见本次 push（基线曾为 4a7ebefd）
+最近提交：origin/dev @ a3e871e4（本机另有未入库工作日志更新）
 本机安装包产物（含 OpenWiki；未签名）：
-  packages/electron/dist/OpenChamber-1.18.1-win-x64.exe（2026-08-09 15:16，约 217 MB）
+  packages/electron/dist/OpenChamber-1.18.1-win-x64.exe（2026-08-09 21:35，约 208 MB；含 rebuild:native）
   packages/electron/dist/win-unpacked/（含 resources/openwiki）
 
 路径约束（必须遵守）
@@ -90,23 +90,58 @@ OpenChamber 本机桌面裁剪 — 工作进展与后续事项
 - 提示词注入中文写作要求；FORMAT 预设含 Language (fixed)
 - Settings 去掉语言输入；搜索与 settings sanitize 不再接受 openWikiLanguage
 
+【阶段 N】OpenWiki 格式设置 UX + 参考文档解析 + Word 导出（计划中，2026-08-10）
+目标：降低格式设置理解成本；用用户文档生成/合并提示词；主 UI 导出 Word。
+硬约束：不改 openwiki 工程流水线与 agent 架构；仍读写 `.wiki/INSTRUCTIONS.md` + `.wiki/FORMAT.md`。
+
+产品约定（已确认）：
+1. Settings 展示与操作
+   - 当前使用的提示词（INSTRUCTIONS + FORMAT，可编辑后应用）
+   - 参考文档路径/列表（项目级，落盘 `.wiki/reference-sources/`）
+   - 「解析参考文档」：用与 Generate 相同模型，从用户文档生成提示词草案，并展示
+   - 「合并覆盖」：用草案合并优化当前提示词（非整段硬替）
+   - 「Reset」：恢复内置默认提示词
+2. 参考文档导入
+   - 拖拽 / 多选文件 / 选文件夹；文件夹需先检查数量与结构并确认
+   - 类型：`.doc` / `.docx` / `.md`
+   - 上限：最多 10 个有效文件；单文件 >10MB 需确认、>50MB 硬拒绝
+   - UI 提示：勿放图片/附件；流程图等用代码表达
+3. 默认提示词规则（Reset 默认 + 解析生成时注入）
+   - 强制简体中文 wiki
+   - 业务流程图/任何画图处默认 Mermaid，除非用户改提示词
+4. 导出（OpenWiki 主 UI，与 Generate/Update 同区；非 Settings）
+   - 前提：已存在 wiki
+   - 用户选输出文件夹；每个 wiki 页 → 一个 `.docx`（保持相对路径）
+   - 排除内部元数据（如 marker / reference-sources）；本地 MD→DOCX，不依赖模型
+5. 去掉旧 Settings 预设/旧 FORMAT 编辑流程
+
+实施切片（建议顺序）：
+  N1 服务端：reference-sources 落盘/清单/校验；解析任务（同 LLM 网关模型）产出 INSTRUCTIONS/FORMAT 草案；合并与 Reset API
+  N2 Settings UI：替换旧格式页为新五块交互 + locale
+  N3 主 UI：Export Word（选目录 + 多文件写出）+ Electron 选文件夹/保存能力
+  N4 文档：`openwiki/DOCUMENTATION.md` + `docs/OPENWIKI_INTEGRATION.md`；聚焦单测
+  N5 冒烟：导入≤10 / 解析 / 合并 / Reset / 导出多 docx
+
+暂缓（与本阶段无关）：
+- 免费模型 503 / Generate 跑很久（已知上游队列问题；换已登录非 free 模型）
+
 三、验证
 --------
 已跑：
 - vitest：openwiki llm-* / reasoning / format / core-routes OpenWiki JSON — pass
 - prepare:openwiki + rebuild:openwiki-native + verify:openwiki(:packaged) — pass
-- package.mjs --win（含上述修复的重建，15:16）— pass（跳过 rebuild:native）
+- package.mjs --win（2026-08-09 21:35）— pass（含 rebuild:native）
 - bun run dead-code（根目录，非阻塞报告）
 
 未闭环：
-- 完整 Generate/Update 产出稳定中文正文（依赖可用 LLM；过程中修过多项 400）
-- rebuild:native（缺 VS Build Tools）
+- 完整 Generate/Update 产出稳定中文正文（依赖可用 LLM；免费档易 503）
+- 阶段 N（格式 UX / 参考解析 / Word 导出）— 仅计划，未开工
 
 四、刻意未做 / 后续
 ------------------
 优先级高：
-1. 用已登录模型再跑完整 Generate + Update，确认中文 .wiki 正文
-2. 重装 VS Build Tools → D:\work\ai\builder_tools\vs2022，恢复 rebuild:native
+1. 【进行中计划】阶段 N：OpenWiki 格式设置 UX + 参考文档解析 + Word 导出
+2. 用已登录非 free 模型再跑完整 Generate + Update，确认中文 .wiki 正文
 
 优先级中：
 1. ChatGPT Codex / Copilot enterprise 边缘失败 UX
@@ -122,9 +157,12 @@ OpenChamber 本机桌面裁剪 — 工作进展与后续事项
 [x] electron:dev / Git / 会话 / 终端（阶段 F）
 [x] CLI tunnel/connect-url disabled；远程 API 410
 [x] Settings 无 Remote / Tunnel（代码 + GUI）
-[x] 含 OpenWiki 的安装包 + verify:openwiki:packaged（多次重建至 15:16）
+[x] 含 OpenWiki 的安装包 + verify:openwiki:packaged（多次重建至 15:16 / 21:35）
 [x] OpenWiki JSON 中间件 + preflight/generate 入队
-[x] reasoning_content / stream_options 网关修复（源码 + 单测；装入 15:16 包）
-[x] Wiki 语言固定 zh-CN（源码 + 单测；装入 15:16 包）
-[ ] OpenWiki 完整中文正文 Generate/Update 人工确认
-[ ] rebuild:native + 全量 electron:build（需 VS Build Tools）
+[x] reasoning_content / stream_options 网关修复（源码 + 单测；装入包）
+[x] Wiki 语言固定 zh-CN（源码 + 单测；装入包）
+[x] rebuild:native + 全量 electron:build（2026-08-09 21:35）
+[ ] OpenWiki 完整中文正文 Generate/Update 人工确认（建议非 free 模型）
+[ ] 阶段 N：参考文档导入/解析/合并/Reset
+[ ] 阶段 N：Settings 新格式 UI（去掉旧预设流）
+[ ] 阶段 N：主 UI 导出（每 wiki 页一个 docx）
