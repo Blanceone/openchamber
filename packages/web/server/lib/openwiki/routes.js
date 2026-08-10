@@ -13,6 +13,18 @@ import {
   assertOpenWikiModelGatewayReady,
   classifyWikiOwnership,
 } from './index.js';
+import {
+  addReferenceSources,
+  listReferenceSources,
+  removeReferenceSource,
+} from './reference-sources.js';
+import {
+  mergeFormatDraft,
+  readFormatDraft,
+  resetFormatBundle,
+  startFormatParseJob,
+} from './format-parse.js';
+import { buildWikiDocxExport } from './md-docx.js';
 
 const sendError = (res, error, fallbackStatus = 500) => {
   const status = Number(error?.statusCode) > 0 ? Number(error.statusCode) : fallbackStatus;
@@ -148,6 +160,114 @@ export function registerOpenWikiRoutes(app, deps) {
         applyPreset: body.applyPreset === true,
       });
       res.json(bundle);
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.get('/api/openwiki/reference-sources', async (req, res) => {
+    try {
+      const directory = await resolveDirectory(resolveProjectDirectory, req, req.query.directory);
+      res.json(await listReferenceSources(directory));
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.post('/api/openwiki/reference-sources', async (req, res) => {
+    try {
+      const body = req.body || {};
+      const directory = await resolveDirectory(resolveProjectDirectory, req, body.directory);
+      const result = await addReferenceSources(directory, {
+        files: body.files,
+        confirmLarge: body.confirmLarge === true,
+      });
+      res.status(201).json(result);
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.delete('/api/openwiki/reference-sources', async (req, res) => {
+    try {
+      const body = req.body || {};
+      const directory = await resolveDirectory(resolveProjectDirectory, req, body.directory || req.query.directory);
+      const fileId = typeof body.id === 'string' ? body.id : req.query.id;
+      res.json(await removeReferenceSource(directory, fileId));
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.get('/api/openwiki/format/draft', async (req, res) => {
+    try {
+      const directory = await resolveDirectory(resolveProjectDirectory, req, req.query.directory);
+      res.json({ draft: await readFormatDraft(directory) });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.post('/api/openwiki/format/parse', async (req, res) => {
+    try {
+      const body = req.body || {};
+      const directory = await resolveDirectory(resolveProjectDirectory, req, body.directory);
+      const settings = readOpenChamberSettings ? await readOpenChamberSettings() : {};
+      const job = await startFormatParseJob({
+        directory,
+        model: body.model,
+        openWikiModelOverride: typeof settings.openWikiModelOverride === 'string'
+          ? settings.openWikiModelOverride
+          : null,
+      });
+      res.status(202).json({ job });
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.post('/api/openwiki/format/merge', async (req, res) => {
+    try {
+      const body = req.body || {};
+      const directory = await resolveDirectory(resolveProjectDirectory, req, body.directory);
+      const settings = readOpenChamberSettings ? await readOpenChamberSettings() : {};
+      const result = await mergeFormatDraft({
+        directory,
+        model: body.model,
+        openWikiModelOverride: typeof settings.openWikiModelOverride === 'string'
+          ? settings.openWikiModelOverride
+          : null,
+      });
+      res.json(result);
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.post('/api/openwiki/format/reset', async (req, res) => {
+    try {
+      const body = req.body || {};
+      const directory = await resolveDirectory(resolveProjectDirectory, req, body.directory);
+      const bundle = await resetFormatBundle(directory);
+      res.json(bundle);
+    } catch (error) {
+      sendError(res, error);
+    }
+  });
+
+  app.post('/api/openwiki/export/docx', async (req, res) => {
+    try {
+      const body = req.body || {};
+      const directory = await resolveDirectory(resolveProjectDirectory, req, body.directory);
+      const ownership = classifyWikiOwnership(directory);
+      if (!ownership.wikiExists) {
+        throw Object.assign(new Error('Generate a wiki before exporting'), {
+          statusCode: 404,
+          code: 'wiki-missing',
+        });
+      }
+      const payload = await buildWikiDocxExport(directory);
+      res.json(payload);
     } catch (error) {
       sendError(res, error);
     }

@@ -431,7 +431,13 @@ Register routes **before** OpenCode proxy (ui-api-decoupling).
 | `POST` | `/api/openwiki/preflight` | Validate model mapping + credentials + paths + consent |
 | `GET` | `/api/openwiki/format` | Read brief + format + preset (`directory` query) |
 | `PUT` | `/api/openwiki/format` | Write brief + format + preset; optional `applyPreset` with confirm semantics |
-| `GET` | `/api/openwiki/format/presets` | List built-in preset ids + localized titles/descriptions (or UI-only presets with server seed bodies) |
+| `GET` | `/api/openwiki/format/presets` | List built-in preset ids + seed bodies (Reset uses `openwiki-default`; Settings UX no longer centers presets) |
+| `GET` / `POST` / `DELETE` | `/api/openwiki/reference-sources` | List / import (base64) / remove project reference docs under `.wiki/reference-sources/` |
+| `GET` | `/api/openwiki/format/draft` | Read parsed draft prompts (if any) |
+| `POST` | `/api/openwiki/format/parse` | Start in-process `parse-format` job (same LLM gateway model as Generate) |
+| `POST` | `/api/openwiki/format/merge` | Soft-merge draft into active `INSTRUCTIONS.md` / `FORMAT.md` |
+| `POST` | `/api/openwiki/format/reset` | Restore built-in default prompts (zh-CN + Mermaid) |
+| `POST` | `/api/openwiki/export/docx` | Build one `.docx` per wiki page (local MD→DOCX; no model) for desktop write-out |
 | `POST` | `/api/openwiki/generate` | Start `init` job |
 | `POST` | `/api/openwiki/update` | Start `update` job |
 | `GET` | `/api/openwiki/job` | Current/last job for directory |
@@ -440,7 +446,7 @@ Register routes **before** OpenCode proxy (ui-api-decoupling).
 | `GET` | `/api/openwiki/tree` | Optional convenience tree (or UI uses `/api/fs/list` on `.wiki/`) |
 | `GET` | `/api/openwiki/page` | Optional raw markdown (or UI uses `/api/fs/read`) |
 
-**Job concurrency:** one active OpenWiki job **per workspace directory**. A second start returns `409` `code: 'job-in-progress'`.
+**Job concurrency:** one active OpenWiki job **per workspace directory** (including `parse-format`). A second start returns `409` `code: 'job-in-progress'`.
 
 Job record (in-memory, walkthrough-style; optional disk summary of last result):
 
@@ -449,7 +455,7 @@ type OpenWikiJob = {
   id: string
   directory: string
   mode: 'code'
-  command: 'init' | 'update'
+  command: 'init' | 'update' | 'parse-format'
   stage: OpenWikiJobStage
   model: { providerID: string; modelID: string }
   mappedProvider: string

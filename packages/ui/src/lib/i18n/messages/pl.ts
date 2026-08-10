@@ -2977,4 +2977,9 @@ export const dict: Record<I18nKey, string> = {
   'openwiki.stage.completed': "Ukończono",
   'openwiki.stage.failed': "Niepowodzenie",
   'openwiki.stage.cancelled': "Anulowano",
+  'openwiki.action.exportDocx': "Eksportuj Word",
+  'openwiki.export.preparing': "Przygotowywanie eksportu Word…",
+  'openwiki.export.writing': "Zapisywanie {count} plików Word…",
+  'openwiki.export.done': "Wyeksportowano {count} plików Word.",
+  'openwiki.export.failed': "Eksport Word nie powiódł się.",
 } as const;

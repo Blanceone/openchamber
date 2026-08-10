@@ -2,10 +2,13 @@ import { runtimeFetch } from '@/lib/runtime-fetch';
 import {
   OpenWikiApiError,
   type OpenWikiConsentAction,
+  type OpenWikiDocxExportFile,
   type OpenWikiFormatBundle,
+  type OpenWikiFormatDraft,
   type OpenWikiJob,
   type OpenWikiJobStage,
   type OpenWikiModelRef,
+  type OpenWikiReferenceSourcesList,
   type OpenWikiStatus,
 } from './types';
 
@@ -159,4 +162,110 @@ export async function cancelOpenWikiJob(directory: string): Promise<OpenWikiJob 
   if (!response.ok) return throwFromResponse(response, 'Failed to cancel wiki job');
   const payload = await readJson<{ job: OpenWikiJob | null }>(response);
   return payload.job;
+}
+
+export async function fetchOpenWikiReferenceSources(
+  directory: string,
+  signal?: AbortSignal,
+): Promise<OpenWikiReferenceSourcesList> {
+  const response = await runtimeFetch(`${BASE}/reference-sources`, {
+    query: { directory },
+    signal,
+  });
+  if (!response.ok) return throwFromResponse(response, 'Failed to load reference documents');
+  return readJson<OpenWikiReferenceSourcesList>(response);
+}
+
+export async function uploadOpenWikiReferenceSources(
+  directory: string,
+  files: Array<{ name: string; contentBase64: string; confirmLarge?: boolean }>,
+  options: { confirmLarge?: boolean } = {},
+): Promise<OpenWikiReferenceSourcesList> {
+  const response = await runtimeFetch(`${BASE}/reference-sources`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      directory,
+      files,
+      confirmLarge: options.confirmLarge === true,
+    }),
+  });
+  if (!response.ok) return throwFromResponse(response, 'Failed to import reference documents');
+  return readJson<OpenWikiReferenceSourcesList>(response);
+}
+
+export async function removeOpenWikiReferenceSource(
+  directory: string,
+  id: string,
+): Promise<OpenWikiReferenceSourcesList> {
+  const response = await runtimeFetch(`${BASE}/reference-sources`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ directory, id }),
+  });
+  if (!response.ok) return throwFromResponse(response, 'Failed to remove reference document');
+  return readJson<OpenWikiReferenceSourcesList>(response);
+}
+
+export async function fetchOpenWikiFormatDraft(
+  directory: string,
+  signal?: AbortSignal,
+): Promise<OpenWikiFormatDraft | null> {
+  const response = await runtimeFetch(`${BASE}/format/draft`, {
+    query: { directory },
+    signal,
+  });
+  if (!response.ok) return throwFromResponse(response, 'Failed to load format draft');
+  const payload = await readJson<{ draft: OpenWikiFormatDraft | null }>(response);
+  return payload.draft;
+}
+
+export async function startOpenWikiFormatParse(
+  directory: string,
+  options: { model?: OpenWikiModelRef | string } = {},
+): Promise<OpenWikiJob> {
+  const response = await runtimeFetch(`${BASE}/format/parse`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ directory, model: options.model }),
+  });
+  if (!response.ok) return throwFromResponse(response, 'Failed to start format parse');
+  const payload = await readJson<{ job: OpenWikiJob }>(response);
+  return payload.job;
+}
+
+export async function mergeOpenWikiFormatDraft(
+  directory: string,
+  options: { model?: OpenWikiModelRef | string } = {},
+): Promise<{ bundle: OpenWikiFormatBundle; draft: OpenWikiFormatDraft }> {
+  const response = await runtimeFetch(`${BASE}/format/merge`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ directory, model: options.model }),
+  });
+  if (!response.ok) return throwFromResponse(response, 'Failed to merge format draft');
+  return readJson(response);
+}
+
+export async function resetOpenWikiFormat(directory: string): Promise<OpenWikiFormatBundle> {
+  const response = await runtimeFetch(`${BASE}/format/reset`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ directory }),
+  });
+  if (!response.ok) return throwFromResponse(response, 'Failed to reset wiki format');
+  return readJson<OpenWikiFormatBundle>(response);
+}
+
+export async function exportOpenWikiDocx(directory: string): Promise<{
+  wikiRoot: string;
+  files: OpenWikiDocxExportFile[];
+}> {
+  const response = await runtimeFetch(`${BASE}/export/docx`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ directory }),
+  });
+  if (!response.ok) return throwFromResponse(response, 'Failed to export wiki to Word');
+  return readJson(response);
 }

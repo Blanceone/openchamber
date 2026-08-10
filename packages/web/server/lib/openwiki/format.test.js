@@ -18,6 +18,7 @@ describe('OpenWiki fixed document language', () => {
     for (const id of ['openwiki-default', 'architecture-module', 'api-service', 'custom']) {
       const bodies = getPresetBodies(/** @type {any} */ (id));
       expect(bodies.format).toContain('Simplified Chinese');
+      expect(bodies.format).toContain('Mermaid');
     }
   });
 });

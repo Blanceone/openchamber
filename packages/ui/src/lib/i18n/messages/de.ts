@@ -2958,4 +2958,9 @@ export const dict = {
   'openwiki.stage.completed': "Abgeschlossen",
   'openwiki.stage.failed': "Fehlgeschlagen",
   'openwiki.stage.cancelled': "Abgebrochen",
+  'openwiki.action.exportDocx': "Word exportieren",
+  'openwiki.export.preparing': "Word-Export wird vorbereitet…",
+  'openwiki.export.writing': "{count} Word-Dateien werden geschrieben…",
+  'openwiki.export.done': "{count} Word-Dateien exportiert.",
+  'openwiki.export.failed': "Word-Export fehlgeschlagen.",
 };

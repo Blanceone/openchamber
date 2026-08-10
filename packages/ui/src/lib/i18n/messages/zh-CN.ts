@@ -2961,4 +2961,9 @@ export const dict: Record<I18nKey, string> = {
   'openwiki.stage.completed': "已完成",
   'openwiki.stage.failed': "失败",
   'openwiki.stage.cancelled': "已取消",
+  'openwiki.action.exportDocx': "导出 Word",
+  'openwiki.export.preparing': "正在准备 Word 导出…",
+  'openwiki.export.writing': "正在写入 {count} 个 Word 文件…",
+  'openwiki.export.done': "已导出 {count} 个 Word 文件。",
+  'openwiki.export.failed': "Word 导出失败。",
 };

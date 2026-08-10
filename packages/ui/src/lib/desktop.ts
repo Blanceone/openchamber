@@ -877,6 +877,152 @@ export const saveDesktopMarkdownFile = async (
   }
 };
 
+export type DesktopReferenceFileMeta = {
+  path: string;
+  name: string;
+  size: number;
+};
+
+export const pickDesktopReferenceFiles = async (): Promise<{
+  success: boolean;
+  files?: DesktopReferenceFileMeta[];
+  error?: string;
+}> => {
+  if (!hasDesktopInvoke() || !isDesktopLocalOriginActive()) {
+    return { success: false, error: 'Native file picker not available' };
+  }
+  try {
+    const selected = await getDesktopBridge()?.openDialog?.({
+      directory: false,
+      multiple: true,
+      title: 'Select reference documents',
+      filters: [
+        { name: 'Reference documents', extensions: ['md', 'doc', 'docx'] },
+      ],
+    });
+    if (!selected) return { success: false, error: 'cancelled' };
+    const paths = Array.isArray(selected)
+      ? selected.filter((item): item is string => typeof item === 'string')
+      : (typeof selected === 'string' ? [selected] : []);
+    if (paths.length === 0) return { success: false, error: 'cancelled' };
+    return {
+      success: true,
+      files: paths.map((filePath) => ({
+        path: filePath,
+        name: filePath.replace(/^.*[/\\]/, ''),
+        size: 0,
+      })),
+    };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+};
+
+export const scanDesktopReferenceFolder = async (): Promise<{
+  success: boolean;
+  files?: DesktopReferenceFileMeta[];
+  error?: string;
+}> => {
+  if (!hasDesktopInvoke() || !isDesktopLocalOriginActive()) {
+    return { success: false, error: 'Native folder picker not available' };
+  }
+  try {
+    const selected = await getDesktopBridge()?.openDialog?.({
+      directory: true,
+      multiple: false,
+      title: 'Select reference folder',
+    });
+    if (!selected || typeof selected !== 'string') {
+      return { success: false, error: 'cancelled' };
+    }
+    const result = await invokeDesktop<{ files?: DesktopReferenceFileMeta[] }>('desktop_scan_reference_folder', {
+      directory: selected,
+      extensions: ['md', 'doc', 'docx'],
+      maxFiles: 50,
+    });
+    return {
+      success: true,
+      files: Array.isArray(result?.files) ? result.files : [],
+    };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+};
+
+export const readDesktopFileBase64 = async (
+  filePath: string,
+): Promise<{ success: boolean; base64?: string; size?: number; error?: string }> => {
+  if (!hasDesktopInvoke() || !isDesktopLocalOriginActive()) {
+    return { success: false, error: 'Native file access not available' };
+  }
+  try {
+    const result = await invokeDesktop<{ base64?: string; size?: number }>('desktop_read_user_file', {
+      path: filePath,
+    });
+    if (!result?.base64) {
+      return { success: false, error: 'Failed to read file' };
+    }
+    return {
+      success: true,
+      base64: result.base64,
+      size: typeof result.size === 'number' ? result.size : undefined,
+    };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+};
+
+export const writeDesktopFiles = async (
+  rootDir: string,
+  files: Array<{ relativePath: string; contentBase64: string }>,
+): Promise<{ success: boolean; written?: string[]; error?: string }> => {
+  if (!hasDesktopInvoke() || !isDesktopLocalOriginActive()) {
+    return { success: false, error: 'Native file write not available' };
+  }
+  const trimmedRoot = rootDir?.trim();
+  if (!trimmedRoot) {
+    return { success: false, error: 'Output folder is required' };
+  }
+  if (!Array.isArray(files) || files.length === 0) {
+    return { success: false, error: 'No files to write' };
+  }
+  try {
+    const result = await invokeDesktop<{ written?: string[] }>('desktop_write_files', {
+      rootDir: trimmedRoot,
+      files,
+    });
+    return {
+      success: true,
+      written: Array.isArray(result?.written) ? result.written : [],
+    };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+};
+
+export const pickDesktopOutputDirectory = async (): Promise<{
+  success: boolean;
+  path?: string;
+  error?: string;
+}> => {
+  if (!hasDesktopInvoke() || !isDesktopLocalOriginActive()) {
+    return { success: false, error: 'Native folder picker not available' };
+  }
+  try {
+    const selected = await getDesktopBridge()?.openDialog?.({
+      directory: true,
+      multiple: false,
+      title: 'Select export folder',
+    });
+    if (!selected || typeof selected !== 'string') {
+      return { success: false, error: 'cancelled' };
+    }
+    return { success: true, path: selected };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+};
+
 export const openDesktopProjectInApp = async (
   projectPath: string,
   appId: string,

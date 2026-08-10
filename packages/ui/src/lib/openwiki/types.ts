@@ -27,7 +27,7 @@ export type OpenWikiJob = {
   id: string;
   directory: string;
   mode: 'code';
-  command: 'init' | 'update';
+  command: 'init' | 'update' | 'parse-format';
   stage: OpenWikiJobStage;
   model: OpenWikiModelRef;
   mappedProvider?: string;
@@ -36,6 +36,39 @@ export type OpenWikiJob = {
   detail?: string;
   error?: { code: string; message: string; providerID?: string };
   cancelRequested?: boolean;
+};
+
+export type OpenWikiReferenceSource = {
+  id: string;
+  name: string;
+  size: number;
+  extension: string;
+  modifiedAt: number;
+};
+
+export type OpenWikiReferenceSourcesList = {
+  root: string;
+  files: OpenWikiReferenceSource[];
+  count: number;
+  maxFiles: number;
+  saved?: string[];
+};
+
+export type OpenWikiFormatDraft = {
+  instructions: string;
+  format: string;
+  createdAt: number | null;
+  updatedAt: number | null;
+  model: OpenWikiModelRef | null;
+  sourceFiles: string[];
+  warnings: string[];
+};
+
+export type OpenWikiDocxExportFile = {
+  relativePath: string;
+  fileName: string;
+  contentBase64: string;
+  size: number;
 };
 
 export type OpenWikiStatus = {

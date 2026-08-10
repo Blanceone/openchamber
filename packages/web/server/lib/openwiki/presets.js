@@ -14,6 +14,13 @@ const LANGUAGE_RULES = [
   '- Do not switch the wiki language.',
 ].join('\n');
 
+const DIAGRAM_RULES = [
+  '# Diagrams',
+  '',
+  '- For business process flows and any diagram or chart, use Mermaid fenced code blocks by default.',
+  '- Do not use ASCII art, embedded images, or non-Mermaid diagram formats unless the brief/format explicitly says otherwise.',
+].join('\n');
+
 /** @type {FormatPresetId[]} */
 export const FORMAT_PRESET_IDS = [
   'openwiki-default',
@@ -62,6 +69,8 @@ export const getPresetBodies = (id) => {
           '- Link related pages with relative `.md` links',
           '- Do not invent APIs or modules you have not inspected',
           '- Do not rewrite `INSTRUCTIONS.md` or `FORMAT.md`',
+          '',
+          DIAGRAM_RULES,
         ].join('\n'),
       };
     case 'api-service':
@@ -87,12 +96,14 @@ export const getPresetBodies = (id) => {
           '- Prefer concrete endpoint/type names from source',
           '- Link consumers and producers of each contract',
           '- Do not rewrite `INSTRUCTIONS.md` or `FORMAT.md`',
+          '',
+          DIAGRAM_RULES,
         ].join('\n'),
       };
     case 'custom':
       return {
         instructions: '',
-        format: LANGUAGE_RULES,
+        format: [LANGUAGE_RULES, '', DIAGRAM_RULES].join('\n'),
       };
     case 'openwiki-default':
     default:
@@ -106,6 +117,8 @@ export const getPresetBodies = (id) => {
           'Follow OpenWiki’s built-in documentation outline and quality rules for this repository.',
           'Do not invent a custom section taxonomy unless source evidence clearly requires it.',
           'Do not rewrite `INSTRUCTIONS.md` or `FORMAT.md`.',
+          '',
+          DIAGRAM_RULES,
         ].join('\n'),
       };
   }

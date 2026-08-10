@@ -3450,6 +3450,108 @@ const handleInvoke = async (browserWindow, command, args = {}) => {
       return result.filePath;
     }
 
+    case 'desktop_scan_reference_folder': {
+      const directory = typeof args.directory === 'string' ? path.resolve(args.directory.trim()) : '';
+      if (!directory) throw new Error('Directory is required');
+      const extensions = Array.isArray(args.extensions)
+        ? args.extensions
+          .filter((item) => typeof item === 'string' && item.trim())
+          .map((item) => item.trim().replace(/^\./, '').toLowerCase())
+        : ['md', 'doc', 'docx'];
+      const allowed = new Set(extensions);
+      const maxFiles = Math.min(Math.max(Number(args.maxFiles) || 50, 1), 200);
+      /** @type {Array<{ path: string, name: string, size: number }>} */
+      const files = [];
+      /** @type {string[]} */
+      const stack = [directory];
+      while (stack.length > 0 && files.length < maxFiles) {
+        const current = stack.pop();
+        if (!current) continue;
+        let entries;
+        try {
+          entries = await fsp.readdir(current, { withFileTypes: true });
+        } catch {
+          continue;
+        }
+        for (const entry of entries) {
+          if (files.length >= maxFiles) break;
+          if (entry.name === '.' || entry.name === '..') continue;
+          const full = path.join(current, entry.name);
+          if (entry.isDirectory()) {
+            if (entry.name === 'node_modules' || entry.name === '.git') continue;
+            stack.push(full);
+            continue;
+          }
+          if (!entry.isFile()) continue;
+          const ext = path.extname(entry.name).replace(/^\./, '').toLowerCase();
+          if (!allowed.has(ext)) continue;
+          const stats = await fsp.stat(full);
+          files.push({ path: full, name: entry.name, size: stats.size });
+        }
+      }
+      files.sort((a, b) => a.path.localeCompare(b.path));
+      return { files };
+    }
+
+    case 'desktop_read_user_file': {
+      // Explicit user-selected files (file/folder dialogs). Local-sender gated by
+      // handleInvoke; still refuse known secret paths and oversized payloads.
+      const rawPath = typeof args.path === 'string' ? args.path : '';
+      if (!rawPath) throw new Error('Path is required');
+      const filePath = path.resolve(rawPath);
+      const DENIED_SEGMENTS = ['.ssh', '.aws', '.gnupg', '.gpg', '.config/gh', '.config/openchamber/credentials'];
+      const normalized = filePath.split(path.sep).join('/');
+      if (DENIED_SEGMENTS.some((segment) => normalized.includes(`/${segment}/`) || normalized.endsWith(`/${segment}`))) {
+        throw new Error('Access to this path is not allowed');
+      }
+      const basename = path.basename(filePath).toLowerCase();
+      if (basename === '.env' || basename.startsWith('.env.') || basename.endsWith('.pem') || basename.endsWith('.key')) {
+        throw new Error('Access to this path is not allowed');
+      }
+      const stats = await fsp.stat(filePath);
+      if (!stats.isFile()) throw new Error('Path is not a file');
+      if (stats.size > 50 * 1024 * 1024) {
+        throw new Error('File is too large. Maximum size is 50MB.');
+      }
+      const bytes = await fsp.readFile(filePath);
+      return { mime: 'application/octet-stream', base64: bytes.toString('base64'), size: bytes.length };
+    }
+
+    case 'desktop_write_files': {
+      const rootDir = typeof args.rootDir === 'string' ? path.resolve(args.rootDir.trim()) : '';
+      if (!rootDir) throw new Error('Output folder is required');
+      // Export/import targets are chosen through native dialogs on the local
+      // desktop. Keep secret-path denial below; do not require $HOME-only roots.
+      const incoming = Array.isArray(args.files) ? args.files : [];
+      if (incoming.length === 0) throw new Error('No files to write');
+      if (incoming.length > 500) throw new Error('Too many files to write');
+      /** @type {string[]} */
+      const written = [];
+      for (const file of incoming) {
+        const relativePath = typeof file?.relativePath === 'string' ? file.relativePath.trim() : '';
+        const contentBase64 = typeof file?.contentBase64 === 'string' ? file.contentBase64 : '';
+        if (!relativePath || relativePath.includes('\0')) {
+          throw new Error('Invalid relative path');
+        }
+        const normalized = relativePath.replace(/\\/g, '/');
+        if (normalized.startsWith('/') || normalized.includes('..')) {
+          throw new Error('Invalid relative path');
+        }
+        const target = path.resolve(rootDir, ...normalized.split('/').filter(Boolean));
+        if (target !== rootDir && !target.startsWith(rootDir + path.sep)) {
+          throw new Error('Invalid relative path');
+        }
+        const bytes = Buffer.from(contentBase64, 'base64');
+        if (bytes.length > 50 * 1024 * 1024) {
+          throw new Error(`File is too large: ${relativePath}`);
+        }
+        await fsp.mkdir(path.dirname(target), { recursive: true });
+        await fsp.writeFile(target, bytes);
+        written.push(target);
+      }
+      return { written };
+    }
+
     case 'desktop_read_file': {
       const rawPath = typeof args.path === 'string' ? args.path : '';
       if (!rawPath) throw new Error('Path is required');

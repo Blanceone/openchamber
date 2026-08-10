@@ -2961,4 +2961,9 @@ export const dict: Record<I18nKey, string> = {
   'openwiki.stage.completed': "Завершено",
   'openwiki.stage.failed': "Помилка",
   'openwiki.stage.cancelled': "Скасовано",
+  'openwiki.action.exportDocx': "Експорт Word",
+  'openwiki.export.preparing': "Підготовка експорту Word…",
+  'openwiki.export.writing': "Запис {count} файлів Word…",
+  'openwiki.export.done': "Експортовано {count} файлів Word.",
+  'openwiki.export.failed': "Не вдалося експортувати Word.",
 };

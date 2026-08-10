@@ -10,24 +10,33 @@ import { useUIStore } from '@/stores/useUIStore';
 import {
   applyOpenWikiConsent,
   cancelOpenWikiJob,
+  exportOpenWikiDocx,
   fetchOpenWikiProgress,
   fetchOpenWikiStatus,
   startOpenWikiGenerate,
   startOpenWikiUpdate,
 } from '@/lib/openwiki/api';
 import { OpenWikiApiError, type OpenWikiConsentAction, type OpenWikiJob, type OpenWikiStatus } from '@/lib/openwiki/types';
-import { cn } from '@/lib/utils';
-
-type TreeEntry = { name: string; path: string; type: 'file' | 'directory' };
+import {
+  buildWikiTree,
+  collectWikiDirectoryPaths,
+  listWikiMarkdownPages,
+  pickDefaultWikiPage,
+  type WikiTreeFile,
+} from '@/lib/openwiki/wiki-tree';
+import { pickDesktopOutputDirectory, writeDesktopFiles } from '@/lib/desktop';
+import { WikiPageTree } from '@/components/views/WikiPageTree';
 
 const CONTROL_NAMES = new Set([
   '.openchamber-openwiki.json',
+  '.openchamber-format-draft.json',
   'INSTRUCTIONS.md',
   'FORMAT.md',
   'log.md',
   '_plan.md',
   '.last-update.json',
   '.langsmith.json',
+  'reference-sources',
 ]);
 
 const isActiveStage = (job: OpenWikiJob | null | undefined) =>
@@ -70,13 +79,15 @@ export function OpenWikiView({ directory }: { directory: string }) {
   const [status, setStatus] = useState<OpenWikiStatus | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
   const [job, setJob] = useState<OpenWikiJob | null>(null);
-  const [tree, setTree] = useState<TreeEntry[]>([]);
+  const [tree, setTree] = useState<WikiTreeFile[]>([]);
   const [treeError, setTreeError] = useState<string | null>(null);
+  const [expandedDirs, setExpandedDirs] = useState<Set<string>>(() => new Set());
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [content, setContent] = useState<string>('');
   const [busy, setBusy] = useState(false);
   const [busyDetail, setBusyDetail] = useState<string | null>(null);
   const [confirmRegenerate, setConfirmRegenerate] = useState(false);
+  const [exportDetail, setExportDetail] = useState<string | null>(null);
 
   const composerModel = useMemo(() => {
     if (!currentProviderId || !currentModelId) return undefined;
@@ -123,24 +134,17 @@ export function OpenWikiView({ directory }: { directory: string }) {
         setTree([]);
         return;
       }
-      const listed = await files.listDirectory(status.wikiRoot);
-      const entries = (listed?.entries || [])
-        .filter((entry) => {
-          if (!entry?.name || !entry.path) return false;
-          if (CONTROL_NAMES.has(entry.name)) return false;
-          return !entry.isDirectory && entry.name.toLowerCase().endsWith('.md');
-        })
-        .map((entry) => ({
-          name: entry.name,
-          path: entry.path,
-          type: 'file' as const,
-        }))
-        .sort((a: TreeEntry, b: TreeEntry) => a.name.localeCompare(b.name));
+      const entries = await listWikiMarkdownPages(
+        (path) => files.listDirectory(path),
+        status.wikiRoot,
+        { controlNames: CONTROL_NAMES },
+      );
       setTree(entries);
+      setExpandedDirs(new Set(collectWikiDirectoryPaths(buildWikiTree(entries, status.wikiRoot))));
       setTreeError(null);
       if (!selectedPath && entries.length > 0) {
-        const index = entries.find((e: TreeEntry) => e.name.toLowerCase() === 'index.md') || entries[0];
-        setSelectedPath(index.path);
+        const index = pickDefaultWikiPage(entries);
+        if (index) setSelectedPath(index.path);
       }
     } catch (error) {
       setTreeError(error instanceof Error ? error.message : String(error));
@@ -324,8 +328,57 @@ export function OpenWikiView({ directory }: { directory: string }) {
     setSettingsDialogOpen(true);
   };
 
+  const runExportDocx = async () => {
+    if (busy || !status?.wikiExists) return;
+    setBusy(true);
+    setExportDetail(t('openwiki.export.preparing'));
+    setStatusError(null);
+    try {
+      const picked = await pickDesktopOutputDirectory();
+      if (!picked.success || !picked.path) {
+        if (picked.error && picked.error !== 'cancelled') {
+          setStatusError(picked.error);
+        }
+        return;
+      }
+      const payload = await exportOpenWikiDocx(directory);
+      setExportDetail(t('openwiki.export.writing', { count: String(payload.files.length) }));
+      const written = await writeDesktopFiles(
+        picked.path,
+        payload.files.map((file) => ({
+          relativePath: file.relativePath,
+          contentBase64: file.contentBase64,
+        })),
+      );
+      if (!written.success) {
+        throw new Error(written.error || t('openwiki.export.failed'));
+      }
+      setExportDetail(t('openwiki.export.done', { count: String(written.written?.length || payload.files.length) }));
+    } catch (error) {
+      setStatusError(error instanceof Error ? error.message : String(error));
+      setExportDetail(null);
+    } finally {
+      setBusy(false);
+      window.setTimeout(() => setExportDetail(null), 2500);
+    }
+  };
+
   const active = isActiveStage(job);
   const generating = busy || active;
+
+  const wikiTree = useMemo(() => {
+    if (!status?.wikiRoot || tree.length === 0) return [];
+    return buildWikiTree(tree, status.wikiRoot);
+  }, [status?.wikiRoot, tree]);
+
+  const toggleDirectory = (relativePath: string) => {
+    setExpandedDirs((prev) => {
+      const next = new Set(prev);
+      if (next.has(relativePath)) next.delete(relativePath);
+      else next.add(relativePath);
+      return next;
+    });
+  };
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -396,6 +449,14 @@ export function OpenWikiView({ directory }: { directory: string }) {
                 {t('openwiki.action.regenerate')}
               </Button>
             )}
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={!status.wikiExists || busy}
+              onClick={() => void runExportDocx()}
+            >
+              {t('openwiki.action.exportDocx')}
+            </Button>
           </>
         ) : null}
       </div>
@@ -405,16 +466,20 @@ export function OpenWikiView({ directory }: { directory: string }) {
           {statusError || loginBlocker || jobFailureDetail || t('openwiki.error.modelRequired')}
         </div>
       ) : null}
-      {generating || busyDetail ? (
+      {generating || busyDetail || exportDetail ? (
         <div
           className="flex items-center gap-2 border-b border-border-subtle px-3 py-2 text-xs text-text-muted"
           role="status"
           aria-live="polite"
         >
-          <Icon name="loader-4" className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden="true" />
+          {generating || busyDetail ? (
+            <Icon name="loader-4" className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden="true" />
+          ) : null}
           <span className="min-w-0 truncate">
-            {busyDetail || (job?.stage ? t(`openwiki.stage.${job.stage}`) : t('openwiki.status.generating'))}
-            {job?.detail ? ` — ${job.detail}` : null}
+            {exportDetail
+              || busyDetail
+              || (job?.stage ? t(`openwiki.stage.${job.stage}`) : t('openwiki.status.generating'))}
+            {!exportDetail && job?.detail ? ` — ${job.detail}` : null}
           </span>
         </div>
       ) : null}
@@ -425,30 +490,19 @@ export function OpenWikiView({ directory }: { directory: string }) {
       ) : null}
 
       <div className="flex min-h-0 flex-1">
-        <div className="w-48 shrink-0 overflow-auto border-r border-border-subtle p-2">
+        <div className="w-60 shrink-0 overflow-auto border-r border-border-subtle p-2">
           {treeError ? (
             <div className="text-xs text-status-error">{treeError}</div>
-          ) : tree.length === 0 ? (
+          ) : wikiTree.length === 0 ? (
             <div className="text-xs text-text-muted">{t('openwiki.empty.tree')}</div>
           ) : (
-            <ul className="space-y-0.5">
-              {tree.map((entry) => (
-                <li key={entry.path}>
-                  <button
-                    type="button"
-                    className={cn(
-                      'w-full truncate rounded px-2 py-1 text-left text-xs',
-                      selectedPath === entry.path
-                        ? 'bg-interactive-selection text-text-strong'
-                        : 'text-text-muted hover:bg-interactive-hover',
-                    )}
-                    onClick={() => setSelectedPath(entry.path)}
-                  >
-                    {entry.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <WikiPageTree
+              nodes={wikiTree}
+              selectedPath={selectedPath}
+              expandedDirs={expandedDirs}
+              onToggleDirectory={toggleDirectory}
+              onSelectFile={setSelectedPath}
+            />
           )}
         </div>
         <div className="relative min-w-0 flex-1 overflow-auto p-3">

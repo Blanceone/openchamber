@@ -11,11 +11,30 @@ export {
 } from './model-bridge.js';
 export { getJob, isJobActive } from './job-store.js';
 export { startOpenWikiJob, cancelOpenWikiJob, applyConsentIfNeeded } from './runner.js';
-export { getWikiRoot, getBindPath } from './paths.js';
+export { getWikiRoot, getBindPath, getReferenceSourcesRoot } from './paths.js';
 export { removeWikiBind } from './bind.js';
 export { resolveOpenWikiPackageRoot } from './resolve-package.js';
 export { readMarker } from './marker.js';
 export { startOpenWikiLlmGateway, stopOpenWikiLlmGateway } from './llm-gateway.js';
+export {
+  listReferenceSources,
+  addReferenceSources,
+  removeReferenceSource,
+  readReferenceSourceTexts,
+  extractReferenceSourceText,
+  REFERENCE_SOURCE_MAX_FILES,
+  REFERENCE_SOURCE_CONFIRM_BYTES,
+  REFERENCE_SOURCE_HARD_MAX_BYTES,
+} from './reference-sources.js';
+export {
+  readFormatDraft,
+  writeFormatDraft,
+  resetFormatBundle,
+  startFormatParseJob,
+  mergeFormatDraft,
+  parseDraftMarkers,
+} from './format-parse.js';
+export { markdownToDocxBuffer, buildWikiDocxExport, listExportableWikiMarkdown } from './md-docx.js';
 
 import { classifyWikiOwnership } from './ownership.js';
 import { getJob } from './job-store.js';

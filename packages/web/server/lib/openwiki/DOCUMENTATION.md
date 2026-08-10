@@ -41,7 +41,10 @@ See root `docs/OPENWIKI_INTEGRATION.md` for the full product spec.
 |---|---|
 | `paths.js` | `.wiki` / bind / marker paths |
 | `ownership.js` | absent / managed / foreign / conflict |
-| `format.js` / `presets.js` | `INSTRUCTIONS.md` + `FORMAT.md` |
+| `format.js` / `presets.js` | `INSTRUCTIONS.md` + `FORMAT.md` (defaults include Mermaid diagrams) |
+| `reference-sources.js` | Project reference docs under `.wiki/reference-sources/` |
+| `format-parse.js` | Parse/merge/reset draft prompts from reference docs |
+| `md-docx.js` | Local Markdown → `.docx` export (no model) |
 | `language.js` | Fixed document language `zh-CN` + prompt text |
 | `llm-upstream.js` | OpenCode model → upstream target for the gateway |
 | `llm-chat.js` | OpenAI chat/completions forward + Anthropic / Google / Responses translation |
@@ -60,6 +63,19 @@ See root `docs/OPENWIKI_INTEGRATION.md` for the full product spec.
 - `GET /api/openwiki/status`
 - `POST /api/openwiki/preflight`
 - `GET|PUT /api/openwiki/format`, `GET /api/openwiki/format/presets`
+- `GET|POST|DELETE /api/openwiki/reference-sources`
+- `GET /api/openwiki/format/draft`
+- `POST /api/openwiki/format/parse` (202 job `parse-format`)
+- `POST /api/openwiki/format/merge`, `POST /api/openwiki/format/reset`
+- `POST /api/openwiki/export/docx` (returns base64 `.docx` files for local write)
 - `POST /api/openwiki/consent` (adopt / backup-rebuild only)
 - `POST /api/openwiki/generate` (`init`), `POST /api/openwiki/update`
 - `GET /api/openwiki/job`, `GET /api/openwiki/progress`, `POST /api/openwiki/cancel`
+
+## Format UX (Stage N)
+
+- Reference docs: `.md` / `.doc` / `.docx`, max 10 files, confirm above 10MB, hard reject above 50MB.
+- Parse uses the same OpenWiki LLM gateway model as Generate (in-process; no openwiki agent).
+- Drafts live at `.wiki/.openchamber-format-draft.json` until merge/reset.
+- Reset restores the built-in `openwiki-default` bodies (zh-CN + Mermaid).
+- Word export excludes marker / control files / `reference-sources/` and does not call a model.

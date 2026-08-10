@@ -1,12 +1,12 @@
 OpenChamber 本机桌面裁剪 — 工作进展与后续事项
 ============================================
-日期：2026-08-10（续：阶段 N 计划；OpenWiki 格式设置 UX）
+日期：2026-08-10（阶段 N 落地 + Wiki 树形侧栏）
 分支：dev
 远程：origin = https://github.com/Blanceone/openchamber.git
 上游：upstream = https://github.com/openchamber/openchamber.git
-最近提交：origin/dev @ a3e871e4（本机另有未入库工作日志更新）
-本机安装包产物（含 OpenWiki；未签名）：
-  packages/electron/dist/OpenChamber-1.18.1-win-x64.exe（2026-08-09 21:35，约 208 MB；含 rebuild:native）
+最近提交：见本次变更（基线曾为 8176bec0 Stage N 计划）
+本机安装包产物（含 OpenWiki；未签名；跳过 rebuild:native，无 VS Build Tools）：
+  packages/electron/dist/OpenChamber-1.18.1-win-x64.exe（2026-08-10 17:15，约 207 MB）
   packages/electron/dist/win-unpacked/（含 resources/openwiki）
 
 路径约束（必须遵守）
@@ -29,123 +29,63 @@ OpenChamber 本机桌面裁剪 — 工作进展与后续事项
 二、已完成工作
 --------------
 
-【阶段 A】Windows 桌面产品裁剪（已入库：83ec399d）
-- 删除 packages/vscode、packages/mobile、packages/docs；CI/release 收敛 Windows
-- Windows 环境辅助：bunfig.toml、windows-electron-env.ps1、repair-windows-electron.ps1
+【阶段 A–M】见历史提交 83ec399d … a3e871e4（Windows 裁剪、远程关闭、OpenWiki 嵌入、网关、zh-CN）
 
-【阶段 B】UI/Electron/CLI 去掉远程产品入口（已入库：83ec399d）
-- Settings/Header/深链去掉 Remote/Tunnel/SSH 主机切换
-- CLI tunnel / connect-url 入口禁用；保留 Settings → Git / GitHub
-
-【阶段 C】关闭服务端远程攻击面 + 文案清理（已入库：c0e88555）
-- local-desktop-remote.js：pairing/connect/APNs → 410；disabled tunnel/relay stubs
-- Electron 强制 loopback，忽略 desktopLanAccessEnabled
-- CLI 帮助去掉 tunnel/connect-url/LAN/relay 广告
-- 各 locale 删除 remoteInstances/tunnel 孤儿 i18n 键（约 3685 条）
-- DesktopNetworkSettings 评估：暂不新增独立锁屏密码 UI；settings/env 仍可选用
-
-【阶段 D】runtime-transport 迁移（已入库：c0e88555）
-- 新增 packages/ui/src/lib/runtime-transport/
-- 删除 packages/ui/src/lib/relay/** 私有加密与隧道客户端
-
-【阶段 E】死分支卸载 + boot 瘦身（已入库：c0e88555）
-- runtime-fetch / runtime-auth：去掉私有 relay 分支
-- boot：pairing + managed-tunnel 用 disabled stubs；显式挂载 tunnel/relay 410
-- CLI：capabilities 静态常量；不再激活 tunnel 实现
-
-【阶段 F】OpenCode CLI 安装 + 会话/终端/Git 冒烟（已入库：f2d60695 工作日志）
-- OpenCode CLI 1.18.12 + electron:dev API 冒烟（会话/终端/Git；远程 API 410）
-
-【阶段 G】物理删除远程实现 + 工具链 + electron:build（本机 2026-08-08）
-- 删除 CLI/server tunnel、relay、APNs 实现（保留 types/docs + disabled stubs）
-- Windows HMR、package.mjs、prepare-opencode-cli depends 路径等
-
-工具链 / 缓存（本机）：
-- VS Build Tools → D:\work\ai\builder_tools\vs2022（当前机器缺失；见后续）
-- OpenCode CLI / openwiki tarball / openwiki-bundle / Electron 缓存 → depends/
-
-【阶段 H】Settings GUI + 安装包冒烟（2026-08-08）
-- Settings 无 Remote/Tunnel；health/Git/远程 410；未签名安装包
-
-【阶段 I】OpenWiki 嵌入 Windows 桌面（源码入库：4a7ebefd）
-- UI Wiki 面 + Settings；server openwiki/*；LLM 网关；打包脚本
-
-【阶段 J】本机 OpenWiki 打包闭环 + JSON 中间件（2026-08-09）
-- 恢复 openwiki-0.3.1.tgz；prepare/rebuild/verify-openwiki；NSIS 含 openwiki
-- 跳过 rebuild:native（缺 VS；node-pty N-API prebuilds）
-- 修复：/api/openwiki 加入 express JSON 白名单（否则 POST model-required）
-- 冒烟：preflight/generate 入队、.wiki 脚手架；匿名 Zen 曾 fetch failed
-
-【阶段 K】网关上游映射 Gemini / Copilot / ChatGPT OAuth（2026-08-09）
-- llm-upstream / llm-chat 翻译；单测通过；规格文档更新
-
-【阶段 L】Thinking 模型与流式兼容（2026-08-09）
-- reasoning_content：网关按 tool_call id 捕获并回注（DeepSeek/Zen thinking+tools）
-- 上游强制非流式以便捕获；客户端若要 stream 则网关合成 SSE
-- 剥离 stream_options（与 stream=false 并存会 400）
-- 单测：llm-reasoning / buildOpenaiCompatibleForwardBody
-
-【阶段 M】Wiki 文档语言固定简体中文（2026-08-09）
-- 常量 OPENWIKI_DOCUMENT_LANGUAGE = zh-CN；job 忽略 Settings/请求体覆盖
-- 提示词注入中文写作要求；FORMAT 预设含 Language (fixed)
-- Settings 去掉语言输入；搜索与 settings sanitize 不再接受 openWikiLanguage
-
-【阶段 N】OpenWiki 格式设置 UX + 参考文档解析 + Word 导出（计划中，2026-08-10）
-目标：降低格式设置理解成本；用用户文档生成/合并提示词；主 UI 导出 Word。
+【阶段 N】OpenWiki 格式设置 UX + 参考文档解析 + Word 导出（2026-08-10）
 硬约束：不改 openwiki 工程流水线与 agent 架构；仍读写 `.wiki/INSTRUCTIONS.md` + `.wiki/FORMAT.md`。
 
-产品约定（已确认）：
-1. Settings 展示与操作
-   - 当前使用的提示词（INSTRUCTIONS + FORMAT，可编辑后应用）
-   - 参考文档路径/列表（项目级，落盘 `.wiki/reference-sources/`）
-   - 「解析参考文档」：用与 Generate 相同模型，从用户文档生成提示词草案，并展示
-   - 「合并覆盖」：用草案合并优化当前提示词（非整段硬替）
-   - 「Reset」：恢复内置默认提示词
-2. 参考文档导入
-   - 拖拽 / 多选文件 / 选文件夹；文件夹需先检查数量与结构并确认
-   - 类型：`.doc` / `.docx` / `.md`
-   - 上限：最多 10 个有效文件；单文件 >10MB 需确认、>50MB 硬拒绝
-   - UI 提示：勿放图片/附件；流程图等用代码表达
-3. 默认提示词规则（Reset 默认 + 解析生成时注入）
-   - 强制简体中文 wiki
-   - 业务流程图/任何画图处默认 Mermaid，除非用户改提示词
-4. 导出（OpenWiki 主 UI，与 Generate/Update 同区；非 Settings）
-   - 前提：已存在 wiki
-   - 用户选输出文件夹；每个 wiki 页 → 一个 `.docx`（保持相对路径）
-   - 排除内部元数据（如 marker / reference-sources）；本地 MD→DOCX，不依赖模型
-5. 去掉旧 Settings 预设/旧 FORMAT 编辑流程
+已实现：
+- N1 服务端
+  - `.wiki/reference-sources/` 导入/清单/删除（≤10；>10MB 确认；>50MB 拒绝；.md/.doc/.docx）
+  - `POST /api/openwiki/format/parse`（job `parse-format`，同 LLM 网关，产草案）
+  - `GET /api/openwiki/format/draft`、`POST .../merge`、`POST .../reset`
+  - `POST /api/openwiki/export/docx`（本地 MD→DOCX，adm-zip，无新依赖）
+  - 默认提示词含简体中文 + Mermaid 规则
+- N2 Settings UI
+  - 去掉预设主流程；当前提示词编辑 + Reset
+  - 参考文档拖放/多选/选文件夹；解析 / 合并 / 草案预览
+  - 全 locale + settings search 更新
+- N3 主 UI Export Word + Electron
+  - Wiki 面 Export Word；选输出目录；每页一个 `.docx`
+  - IPC：`desktop_scan_reference_folder` / `desktop_read_user_file` / `desktop_write_files`
+- N4 文档与单测
+  - `openwiki/DOCUMENTATION.md`、`docs/OPENWIKI_INTEGRATION.md`
+  - `reference-sources.test.js` / `format-parse.test.js` / `md-docx.test.js`
+  - `stage-n-smoke.mjs`（服务端自动化冒烟 14/14）
 
-实施切片（建议顺序）：
-  N1 服务端：reference-sources 落盘/清单/校验；解析任务（同 LLM 网关模型）产出 INSTRUCTIONS/FORMAT 草案；合并与 Reset API
-  N2 Settings UI：替换旧格式页为新五块交互 + locale
-  N3 主 UI：Export Word（选目录 + 多文件写出）+ Electron 选文件夹/保存能力
-  N4 文档：`openwiki/DOCUMENTATION.md` + `docs/OPENWIKI_INTEGRATION.md`；聚焦单测
-  N5 冒烟：导入≤10 / 解析 / 合并 / Reset / 导出多 docx
+【Wiki 树形侧栏】（2026-08-10）
+- 问题：主 UI 仅平铺 `.md`（含子目录相对路径字符串），看不出真实文件夹结构
+- 修复：`wiki-tree.ts` 递归列举 + `buildWikiTree` 嵌套；`WikiPageTree` 可展开文件夹树
+- 侧栏默认展开全部目录；跳过 `reference-sources` 等控制目录
+- 单测：`wiki-tree.test.ts` 6/6；已打入 17:15 安装包
 
-暂缓（与本阶段无关）：
-- 免费模型 503 / Generate 跑很久（已知上游队列问题；换已登录非 free 模型）
+【本机环境】
+- 已清理旧 AppData：`%APPDATA%\OpenChamber`、`OpenChamber Dev`、electron-updater 缓存
+- 本机暂无 VS Build Tools：`electron:build` 全量会卡在 `rebuild:native`；打包改走跳过 native、保留 N-API prebuilds + `rebuild:openwiki-native`
 
 三、验证
 --------
 已跑：
-- vitest：openwiki llm-* / reasoning / format / core-routes OpenWiki JSON — pass
-- prepare:openwiki + rebuild:openwiki-native + verify:openwiki(:packaged) — pass
-- package.mjs --win（2026-08-09 21:35）— pass（含 rebuild:native）
-- bun run dead-code（根目录，非阻塞报告）
+- vitest：openwiki reference-sources / format-parse / md-docx / format 语言+Mermaid；ui `wiki-tree`
+- 阶段 N 服务端冒烟：`bun packages/web/server/lib/openwiki/stage-n-smoke.mjs`（14/14）
+- 打包：`verify:openwiki` staged + packaged；安装包 2026-08-10 17:15
+- bun run dead-code（新增 WikiPageTree / wiki-tree 等后）
 
 未闭环：
-- 完整 Generate/Update 产出稳定中文正文（依赖可用 LLM；免费档易 503）
-- 阶段 N（格式 UX / 参考解析 / Word 导出）— 仅计划，未开工
+- 完整 Generate/Update 产出稳定中文正文（建议非 free 模型人工确认）
+- 阶段 N **GUI** 冒烟（Settings 拖放/选文件夹、真实模型解析合并、Electron 选目录写 docx）
+- 安装 VS Build Tools 到 `D:\work\ai\builder_tools\vs2022` 后恢复完整 `rebuild:native`
 
 四、刻意未做 / 后续
 ------------------
 优先级高：
-1. 【进行中计划】阶段 N：OpenWiki 格式设置 UX + 参考文档解析 + Word 导出
+1. 阶段 N GUI 冒烟（导入 / 真实模型解析合并 / Reset / Export Word 写盘）
 2. 用已登录非 free 模型再跑完整 Generate + Update，确认中文 .wiki 正文
 
 优先级中：
 1. ChatGPT Codex / Copilot enterprise 边缘失败 UX
 2. 匿名 Zen / 网络 TLS 稳定性（若仍用免费档）
+3. 安装 VS Build Tools（builder_tools）以恢复全量 native rebuild
 
 优先级低：
 1. 安装包签名
@@ -157,12 +97,15 @@ OpenChamber 本机桌面裁剪 — 工作进展与后续事项
 [x] electron:dev / Git / 会话 / 终端（阶段 F）
 [x] CLI tunnel/connect-url disabled；远程 API 410
 [x] Settings 无 Remote / Tunnel（代码 + GUI）
-[x] 含 OpenWiki 的安装包 + verify:openwiki:packaged（多次重建至 15:16 / 21:35）
+[x] 含 OpenWiki 的安装包 + verify:openwiki:packaged（多次重建至 17:15）
 [x] OpenWiki JSON 中间件 + preflight/generate 入队
 [x] reasoning_content / stream_options 网关修复（源码 + 单测；装入包）
 [x] Wiki 语言固定 zh-CN（源码 + 单测；装入包）
-[x] rebuild:native + 全量 electron:build（2026-08-09 21:35）
+[x] rebuild:native + 全量 electron:build（2026-08-09 21:35；本机工具链后缺失，后续包跳过）
+[x] 阶段 N：服务端 reference / parse / merge / reset / export API（源码）
+[x] 阶段 N：Settings 新格式 UI + locale/search（源码）
+[x] 阶段 N：主 UI Export + Electron 写文件 IPC（源码）
+[x] 阶段 N：服务端自动化冒烟（导入/限额/Reset/导出/取消 parse；14/14）
+[x] Wiki 主 UI 树形目录（源码 + 单测；装入 17:15 包）
 [ ] OpenWiki 完整中文正文 Generate/Update 人工确认（建议非 free 模型）
-[ ] 阶段 N：参考文档导入/解析/合并/Reset
-[ ] 阶段 N：Settings 新格式 UI（去掉旧预设流）
-[ ] 阶段 N：主 UI 导出（每 wiki 页一个 docx）
+[ ] 阶段 N：GUI 冒烟（拖放导入 / 真实模型解析合并 / Export Word 写盘）
